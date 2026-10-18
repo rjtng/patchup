@@ -81,6 +81,26 @@ You need [Node.js](https://nodejs.org) on your computer; the Supabase CLI runs t
    where id = (select id from auth.users where email = 'you@example.com');
    ```
 
+4. **Approve a technician.** New technicians can't get jobs until they're approved (after you've
+   checked their ID, NBI clearance and certificates). Until there's an admin screen, run:
+
+   ```sql
+   update public.technician_profiles set verification_status = 'approved', verified_at = now()
+   where id = (select id from auth.users where email = 'technician@example.com');
+   ```
+
+   Use `'rejected'` or `'suspended'` (and `is_available = false`) to take someone off.
+
+The app shows technicians their own screens (Jobs) based on the account type they chose at
+sign-up, kept in their account details. If you ever change someone between customer and technician
+by hand, change that too, or they'll keep seeing the old screens (it takes effect when their session
+next refreshes, within the hour, or when they log in again):
+
+```sql
+update auth.users set raw_user_meta_data = raw_user_meta_data || '{"role": "technician"}'
+where email = 'technician@example.com';
+```
+
 The project's **URL** and **publishable key** (Project Settings → API Keys) are safe to put in the
 website and app. The **secret key** (called `service_role` on older projects) bypasses every rule
 above: never put it in the website, the app, or git.
@@ -158,6 +178,13 @@ npx supabase migration new add_payments   # creates migrations/<timestamp>_add_p
 
 Write the change there, add or update tests, check them with `npx supabase test db`, then
 `npx supabase db push` once it's merged.
+
+After pushing, regenerate the app's TypeScript types so its queries are checked against the new
+tables (`npm run build` catches any that no longer match):
+
+```bash
+npx supabase gen types typescript --project-id vfipnxfyzhldhryyrcwe > src/lib/supabase/database.types.ts
+```
 
 Supabase can give a new table full API access by default, even to signed-out visitors. In the same
 migration, revoke that access, grant back only what the app needs, and turn on row level security,

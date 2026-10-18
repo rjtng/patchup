@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Refreshes the visitor's session (pages can't write cookies, so the proxy
- * does it for them) and reports whether someone is signed in.
+ * does it for them) and returns the signed-in person's claims, if any.
  * Follows Supabase's Next.js guide: the refreshed cookies go both to the
  * request, for the page being rendered, and to the response, for the browser.
  */
@@ -29,5 +29,5 @@ export async function updateSession(request: NextRequest, { url, key }: { url: s
   // warns this can sign people out at random.
   const { data } = await supabase.auth.getClaims();
 
-  return { response, signedIn: Boolean(data?.claims) };
+  return { response, claims: data?.claims ?? null };
 }

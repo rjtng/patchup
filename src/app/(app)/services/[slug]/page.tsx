@@ -1,9 +1,10 @@
-import { Users } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { CardsSkeleton } from "@/components/ui/skeleton";
 import { getCategory, serviceCategories } from "@/lib/services";
+import { TechnicianChoices } from "./technician-choices";
 
 export function generateStaticParams() {
   return serviceCategories.map(({ slug }) => ({ slug }));
@@ -14,19 +15,19 @@ export async function generateMetadata({ params }: PageProps<"/services/[slug]">
   return { title: getCategory(slug)?.name ?? "Services" };
 }
 
-// Category screen (Plumbing, Electrical, …). Next step: list technicians with
-// photo, rating, distance, starting price and a Book button.
+// Category screen (Plumbing, Electrical, …): book the first available
+// technician or pick one.
 export default async function ServicePage({ params }: PageProps<"/services/[slug]">) {
   const { slug } = await params;
   const category = getCategory(slug);
   if (!category) notFound();
 
   return (
-    <main>
+    <main className="pb-6">
       <PageHeader title={category.name} backHref="/home" />
-      <EmptyState icon={Users} title={`${category.name} technicians`}>
-        Available technicians for {category.name.toLowerCase()} will be listed here.
-      </EmptyState>
+      <Suspense fallback={<CardsSkeleton />}>
+        <TechnicianChoices slug={slug} />
+      </Suspense>
     </main>
   );
 }

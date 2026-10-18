@@ -45,15 +45,35 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/login`                                | Log in                                              |
 | `/signup` → `/signup/verify`            | Sign up (customer or technician) → 6-digit code     |
 | `/forgot-password` → `/forgot-password/verify` → `/reset-password` | Password reset flow      |
-| `/home`, `/chat`, `/track`, `/bookings`, `/profile` | The five tabs, with the bottom nav          |
-| `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
+| `/home`, `/chat`, `/track`, `/bookings`, `/profile` | Customers' five tabs, with the bottom nav   |
+| `/jobs`, `/chat`, `/profile`            | Technicians' three tabs (technicians start on Jobs) |
+| `/services/[slug]`                      | Service category: first available or pick a technician |
+| `/services/[slug]/book`                 | Booking form: the problem, visit time, address       |
+| `/bookings/[id]`                        | A booking: status, details, quote to approve, timeline, cancel |
+| `/jobs/[id]`                            | A job: accept, on the way, arrived, quote, finish    |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
 sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` handles this and keeps
-sessions fresh. The booking screens are still placeholders:
-the database for them is ready in `supabase/` (see [its README](supabase/README.md)), and the places
-still to connect are marked with `TODO` comments.
+sessions fresh.
+
+**Customers can book:** a category page lists the approved technicians who are taking jobs; the
+customer picks one or sends the request to whoever is available, describes the problem, picks a
+visit time (in Manila time) and a saved or new address. Bookings are listed under the Bookings tab,
+and each has its own page with a timeline and a Cancel button. When the technician sends a
+quote, the customer approves or declines it there.
+
+**Technicians do the jobs:** they start on Jobs, which lists new requests (ones a customer asked
+them for first) and their own jobs, with a switch for whether they're taking new jobs. A job shows
+only the area until they accept it; then they get the full address (with a Google Maps link) and
+the customer's name, and step through on the way, arrived, quote (item by item), and done, or
+finish with the inspection only. Their Profile tab is their work profile: name, city, experience,
+description and the services they get requests for. New technicians wait for PatchUp's approval
+(see "Approve a technician" in `supabase/README.md`).
+
+Every step, and the rules behind them (who may see what, who may take which step and when), is in
+the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
+screens to show (`src/lib/roles.ts`). Places still to connect are marked with `TODO` comments.
 
 ## Project layout
 
@@ -69,10 +89,14 @@ src/
   components/
     brand/             PatchUp logo
     layout/            AuthScreen, PageHeader, BottomNav
-    ui/                Button, TextField, PasswordField, Checkbox, OtpInput, EmptyState
+    ui/                Button, TextField, TextAreaField, PasswordField, Checkbox, OtpInput,
+                       EmptyState, CardsSkeleton
     auth/              VerifyCodeForm (shared OTP step)
-  lib/                 helpers and data (service categories, onboarding flag, auth messages)
-    supabase/          Supabase clients for the browser and the proxy
+    bookings/          StatusChip, DetailRow, BookingTimeline, QuoteItems
+  lib/                 helpers and data (service categories, onboarding flag, auth messages,
+                       booking labels, visit times and payments, who sees which screens)
+    supabase/          Supabase clients for the browser, Server Components and the proxy, and
+                       the database's TypeScript types (database.types.ts)
   proxy.ts             who may open which screens; refreshes the session
 public/                app icons
 supabase/              database: tables, access rules, booking steps, tests
@@ -108,6 +132,7 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Technician list and profile → booking flow (service, date and time, address, confirm).
-4. Bookings list and details, chat, notifications, tracking, reviews.
-5. Technician screens, and an admin dashboard to approve technicians and assign jobs.
+3. Live updates (Supabase Realtime), so new requests and status changes appear without a refresh;
+   then notifications.
+4. Customers: review the technician after the job; chat, live tracking.
+5. An admin dashboard to approve technicians and assign jobs.

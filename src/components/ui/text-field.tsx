@@ -47,6 +47,40 @@ export function TextField({ label, icon: Icon, hint, error, className, ...props 
   );
 }
 
+type TextAreaFieldProps = Omit<ComponentProps<"textarea">, "id"> & {
+  label: string;
+  hint?: string;
+  error?: string;
+};
+
+export function TextAreaField({ label, hint, error, className, ...props }: TextAreaFieldProps) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <label htmlFor={id} className="text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        rows={4}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={hint || error ? hintId : undefined}
+        className={cn(
+          "w-full rounded-field border-2 bg-white px-4 py-3 text-base text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-brand-navy",
+          error ? "border-danger" : "border-line",
+        )}
+        {...props}
+      />
+      {(error || hint) && (
+        <p id={hintId} className={cn("text-sm", error ? "text-danger" : "text-muted")}>
+          {error ?? hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 type PasswordFieldProps = Omit<TextFieldProps, "type">;
 
 export function PasswordField({ label, icon: Icon, hint, error, className, ...props }: PasswordFieldProps) {
