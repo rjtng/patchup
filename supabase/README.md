@@ -85,6 +85,40 @@ The project's **URL** and **publishable key** (Project Settings → API Keys) ar
 website and app. The **secret key** (called `service_role` on older projects) bypasses every rule
 above: never put it in the website, the app, or git.
 
+## Sign-in settings (dashboard, once)
+
+The app signs people in with email and password, and confirms new accounts and password resets
+with a 6-digit code typed into the app. These dashboard settings make that work:
+
+1. **Email templates** (Authentication → Emails → Templates). Supabase's default emails contain a
+   link, not a code. Replace the body of these two templates:
+
+   **Confirm sign up**, subject `Your PatchUp code: {{ .Token }}`
+
+   ```html
+   <h2>Welcome to PatchUp</h2>
+   <p>Enter this code in the app to finish creating your account:</p>
+   <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px">{{ .Token }}</p>
+   <p>If you didn't sign up for PatchUp, you can ignore this email.</p>
+   ```
+
+   **Reset password**, subject `Your PatchUp reset code: {{ .Token }}`
+
+   ```html
+   <h2>Reset your PatchUp password</h2>
+   <p>Enter this code in the app to choose a new password:</p>
+   <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px">{{ .Token }}</p>
+   <p>If you didn't ask to reset your password, you can ignore this email.</p>
+   ```
+
+2. **Your own email sending, before anyone outside the team signs up.** Supabase's built-in email
+   only delivers to members of your Supabase organization, a few emails per hour. Everyone else sees
+   "We can't send email to this address yet". Create an account with an email service such as
+   [Resend](https://resend.com), verify your domain there, and enter its SMTP details under
+   Authentication → Emails → SMTP Settings.
+3. **Minimum password length: 8** (Authentication → Sign In / Providers → Email), to match what the
+   app asks for.
+
 ## Test the rules
 
 The tests in `tests/database/` sign in as different people (customers, technicians, an admin, a

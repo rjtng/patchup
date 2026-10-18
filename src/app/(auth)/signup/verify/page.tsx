@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { VerifyCodeForm } from "@/components/auth/verify-code-form";
 import { AuthScreen } from "@/components/layout/auth-screen";
 
@@ -9,9 +10,11 @@ export default function SignupVerifyPage() {
     <AuthScreen
       backHref="/signup"
       title="Verify your account"
-      subtitle="Enter the 6-digit code we sent to your email or phone."
+      subtitle="Enter the 6-digit code we sent to your email."
     >
-      <VerifyCodeForm nextHref="/home" submitLabel="Verify and continue" />
+      <Suspense>
+        <VerifyCodeForm purpose="signup" nextHref="/home" restartHref="/signup" submitLabel="Verify and continue" />
+      </Suspense>
     </AuthScreen>
   );
 }

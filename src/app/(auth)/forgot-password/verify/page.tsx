@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { VerifyCodeForm } from "@/components/auth/verify-code-form";
 import { AuthScreen } from "@/components/layout/auth-screen";
 
@@ -9,9 +10,16 @@ export default function ForgotPasswordVerifyPage() {
     <AuthScreen
       backHref="/forgot-password"
       title="Enter your code"
-      subtitle="We sent a 6-digit code to your email or phone."
+      subtitle="We sent a 6-digit code to your email."
     >
-      <VerifyCodeForm nextHref="/reset-password" submitLabel="Continue" />
+      <Suspense>
+        <VerifyCodeForm
+          purpose="recovery"
+          nextHref="/reset-password"
+          restartHref="/forgot-password"
+          submitLabel="Continue"
+        />
+      </Suspense>
     </AuthScreen>
   );
 }

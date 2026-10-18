@@ -2,19 +2,19 @@ import { Bell, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { serviceCategories } from "@/lib/services";
+import { Greeting } from "./greeting";
 
 export const metadata: Metadata = { title: "Home" };
 
 export default function HomePage() {
-  // TODO: replace with the signed-in user's first name from Supabase.
-  const firstName: string | null = null;
-
   return (
     <main className="pb-6">
       <header className="bg-brand-gradient-deep rounded-b-[2rem] px-6 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-white">
         <div className="flex min-h-12 items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-white/90">{firstName ? `Hi, ${firstName}` : "Welcome to PatchUp"}</p>
+            <p className="text-sm text-white/90">
+              <Greeting />
+            </p>
             <p className="text-xl font-bold">What needs fixing today?</p>
           </div>
           <Link

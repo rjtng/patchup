@@ -6,33 +6,53 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/text-field";
+import { authErrorMessage } from "@/lib/auth-errors";
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    const account = String(data.get("account") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
-    if (!account || !password) {
-      setError("Enter your email or phone number and your password.");
+    if (!email || !password) {
+      setError("Enter your email and your password.");
       return;
     }
     setError(null);
-    // TODO: sign in with Supabase Auth, show its error message on failure.
-    router.push("/home");
+    setPending(true);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error?.code === "email_not_confirmed") {
+      // Signed up but never entered the code: send a fresh one.
+      await supabase.auth.resend({ type: "signup", email });
+      router.push(`/signup/verify?email=${encodeURIComponent(email)}`);
+      return;
+    }
+    if (error) {
+      setError(authErrorMessage(error));
+      setPending(false);
+      return;
+    }
+    router.replace("/home");
+    router.refresh();
   };
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
       <TextField
-        name="account"
-        label="Email or phone number"
+        name="email"
+        type="email"
+        label="Email"
         icon={Mail}
         placeholder="you@example.com"
-        autoComplete="username"
+        autoComplete="email"
         inputMode="email"
       />
       <div className="flex flex-col gap-2">
@@ -55,7 +75,9 @@ export function LoginForm() {
           {error}
         </p>
       )}
-      <Button type="submit">Log in</Button>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Logging in…" : "Log in"}
+      </Button>
     </form>
   );
 }

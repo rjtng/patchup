@@ -2,8 +2,8 @@ import { LogoMark, Wordmark } from "@/components/brand/logo";
 import { SplashRedirect } from "./splash-redirect";
 
 // Splash screen. After a moment it moves on to onboarding (first visit)
-// or the welcome screen (returning visitor).
-// TODO: once auth is wired up, send signed-in users straight to /home.
+// or the welcome screen (returning visitor). Signed-in people never see it:
+// the proxy (src/proxy.ts) sends them straight to Home.
 export default function SplashPage() {
   return (
     <main className="bg-brand-gradient flex min-h-dvh flex-col items-center justify-center px-8 text-center text-white">

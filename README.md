@@ -2,7 +2,8 @@
 
 A mobile-first web app (PWA) for booking repair services, built from the PatchUp Figma design.
 
-Built with **Next.js 16** (App Router), **React 19**, **TypeScript** and **Tailwind CSS 4**.
+Built with **Next.js 16** (App Router), **React 19**, **TypeScript**, **Tailwind CSS 4** and
+**Supabase** (database and sign-in).
 
 ## Run it
 
@@ -10,6 +11,7 @@ You need [Node.js](https://nodejs.org) 20.9 or newer.
 
 ```bash
 npm install
+cp .env.example .env.local   # Supabase project URL and publishable key
 npm run dev
 ```
 
@@ -27,6 +29,12 @@ Other scripts:
 GitHub Actions runs `npm run lint`, `npm run build` and the database tests on every pull request and
 every push to `main` (see `.github/workflows/ci.yml`).
 
+### Deploying (Vercel)
+
+In the Vercel project, open **Settings → Environment Variables** and add the two variables from
+`.env.example` (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) for
+Production and Preview. They are built into the app, so redeploy after changing them.
+
 ## What's built
 
 | Route                                   | Screen                                              |
@@ -40,9 +48,11 @@ every push to `main` (see `.github/workflows/ci.yml`).
 | `/home`, `/chat`, `/track`, `/bookings`, `/profile` | The five tabs, with the bottom nav          |
 | `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
 
-The forms validate input and move to the next screen, but **nothing is saved yet**: every place that
-needs the backend is marked with a `TODO` comment (search the project for `TODO`). The database is
-ready in `supabase/` (see [its README](supabase/README.md)); the screens aren't connected to it yet.
+**Accounts work:** sign up (with a 6-digit email code), log in, log out and password reset use
+Supabase Auth. Signed-out visitors are sent to Log in, and signed-in people skip the sign-in screens;
+`src/proxy.ts` handles this and keeps sessions fresh. The booking screens are still placeholders:
+the database for them is ready in `supabase/` (see [its README](supabase/README.md)), and the places
+still to connect are marked with `TODO` comments.
 
 ## Project layout
 
@@ -59,7 +69,9 @@ src/
     layout/            AuthScreen, PageHeader, BottomNav
     ui/                Button, TextField, PasswordField, Checkbox, OtpInput, EmptyState
     auth/              VerifyCodeForm (shared OTP step)
-  lib/                 helpers and data (service categories, onboarding flag)
+  lib/                 helpers and data (service categories, onboarding flag, auth messages)
+    supabase/          Supabase clients for the browser and the proxy
+  proxy.ts             who may open which screens; refreshes the session
 public/                app icons
 supabase/              database: tables, access rules, booking steps, tests
 ```
@@ -91,8 +103,9 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 
 ## Next steps
 
-1. Create the Supabase project and upload the database (steps in `supabase/README.md`).
-2. Connect sign-up, log in and password reset to Supabase Auth (email, phone codes).
+1. Finish the Supabase Auth settings: email templates with the code, and your own email sending
+   (see "Sign-in settings" in `supabase/README.md`).
+2. Sign-in with phone codes (needs an SMS provider).
 3. Technician list and profile → booking flow (service, date and time, address, confirm).
 4. Bookings list and details, chat, notifications, tracking, reviews.
 5. Technician screens, and an admin dashboard to approve technicians and assign jobs.
