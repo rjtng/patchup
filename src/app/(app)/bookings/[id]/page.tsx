@@ -7,6 +7,7 @@ import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveUpdates } from "@/components/live-updates";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { amountDue, CUSTOMER_CAN_CANCEL, formatPeso, formatSchedule, fullAddress, quoteItems } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
@@ -54,6 +55,7 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
+      <LiveUpdates topics={[`booking:${booking.id}`]} />
       <section className="rounded-card bg-white p-5 shadow-sm">
         <StatusChip status={booking.status} />
         <h2 className="mt-3 text-xl font-bold text-ink">

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveUpdates } from "@/components/live-updates";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isFinished } from "@/lib/bookings";
@@ -62,8 +63,15 @@ async function JobBoard() {
   const active = jobs.filter((j) => j.technician_id === me && j.status !== "requested" && !isFinished(j.status));
   const done = jobs.filter((j) => j.technician_id === me && isFinished(j.status)).reverse();
 
+  // Their own jobs, and new requests in their services while they're taking jobs.
+  const topics = [
+    `user:${me}`,
+    ...(approved && profile.is_available ? profile.technician_services.map((s) => `requests:${s.category_id}`) : []),
+  ];
+
   return (
     <div className="flex flex-col gap-6 px-6 pt-6">
+      <LiveUpdates topics={topics} />
       {profile.verification_status === "pending" && (
         <Notice icon={Clock} title="We're checking your account">
           You&apos;ll start getting requests once PatchUp approves it. Meanwhile, set up your{" "}
