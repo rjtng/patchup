@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/text-field";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { emailLinkTarget } from "@/lib/auth-links";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
@@ -30,8 +31,8 @@ export function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error?.code === "email_not_confirmed") {
-      // Signed up but never entered the code: send a fresh one.
-      await supabase.auth.resend({ type: "signup", email });
+      // Signed up but never confirmed: send a fresh email.
+      await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: emailLinkTarget("signup") } });
       router.push(`/signup/verify?email=${encodeURIComponent(email)}`);
       return;
     }

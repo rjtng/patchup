@@ -10,7 +10,7 @@ export default function SignupVerifyPage() {
     <AuthScreen
       backHref="/signup"
       title="Verify your account"
-      subtitle="Enter the 6-digit code we sent to your email."
+      subtitle="Tap the link in the email we sent you, or enter its 6-digit code."
     >
       <Suspense>
         <VerifyCodeForm purpose="signup" nextHref="/home" restartHref="/signup" submitLabel="Verify and continue" />

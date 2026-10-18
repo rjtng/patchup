@@ -48,9 +48,10 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/home`, `/chat`, `/track`, `/bookings`, `/profile` | The five tabs, with the bottom nav          |
 | `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
 
-**Accounts work:** sign up (with a 6-digit email code), log in, log out and password reset use
-Supabase Auth. Signed-out visitors are sent to Log in, and signed-in people skip the sign-in screens;
-`src/proxy.ts` handles this and keeps sessions fresh. The booking screens are still placeholders:
+**Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
+password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
+sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` handles this and keeps
+sessions fresh. The booking screens are still placeholders:
 the database for them is ready in `supabase/` (see [its README](supabase/README.md)), and the places
 still to connect are marked with `TODO` comments.
 
@@ -61,6 +62,7 @@ src/
   app/
     (auth)/            sign-in screens (no bottom nav)
     (app)/             the five tabs and their sub-pages (with bottom nav)
+    auth/confirm/      where email links land (sign-up confirmation, password reset)
     globals.css        design tokens: colors, gradient, font
     layout.tsx         root layout, metadata, phone-width column
     manifest.ts        PWA manifest ("Add to Home Screen")
@@ -103,8 +105,8 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 
 ## Next steps
 
-1. Finish the Supabase Auth settings: email templates with the code, and your own email sending
-   (see "Sign-in settings" in `supabase/README.md`).
+1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
+   templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
 3. Technician list and profile → booking flow (service, date and time, address, confirm).
 4. Bookings list and details, chat, notifications, tracking, reviews.

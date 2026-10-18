@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordField, TextField } from "@/components/ui/text-field";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { emailLinkTarget } from "@/lib/auth-links";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,7 +48,7 @@ export function SignupForm() {
     const { data: result, error } = await createClient().auth.signUp({
       email,
       password,
-      options: { data: { full_name: name, role } },
+      options: { data: { full_name: name, role }, emailRedirectTo: emailLinkTarget("signup") },
     });
 
     if (error) {

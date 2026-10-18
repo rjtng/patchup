@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { emailLinkTarget } from "@/lib/auth-links";
 import { createClient } from "@/lib/supabase/client";
 
 export function ForgotPasswordForm() {
@@ -25,7 +26,9 @@ export function ForgotPasswordForm() {
 
     // Supabase answers the same way whether or not the email has an account,
     // so this doesn't reveal who is signed up.
-    const { error } = await createClient().auth.resetPasswordForEmail(email);
+    const { error } = await createClient().auth.resetPasswordForEmail(email, {
+      redirectTo: emailLinkTarget("recovery"),
+    });
     if (error) {
       setError(authErrorMessage(error));
       setPending(false);
@@ -47,7 +50,7 @@ export function ForgotPasswordForm() {
         error={error}
       />
       <Button type="submit" disabled={pending}>
-        {pending ? "Sending…" : "Send code"}
+        {pending ? "Sending…" : "Send reset email"}
       </Button>
     </form>
   );

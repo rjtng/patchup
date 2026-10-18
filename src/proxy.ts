@@ -32,7 +32,13 @@ export async function proxy(request: NextRequest) {
   }
 
   const { response, signedIn } = await updateSession(request, config);
-  const { pathname } = request.nextUrl;
+  const { pathname, search, searchParams } = request.nextUrl;
+
+  // An email link that came back to the home address (Supabase's fallback
+  // when the link's own return address isn't on its allow list).
+  if (pathname === "/" && (searchParams.has("code") || searchParams.has("token_hash"))) {
+    return redirect(request, response, `/auth/confirm${search}`);
+  }
 
   if (!signedIn && ACCOUNT_ONLY.some((section) => within(pathname, section))) {
     return redirect(request, response, pathname === "/reset-password" ? "/forgot-password" : "/login");

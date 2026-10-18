@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { OtpInput } from "@/components/ui/otp-input";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { emailLinkTarget } from "@/lib/auth-links";
 import { createClient } from "@/lib/supabase/client";
 
 const RESEND_AFTER_SECONDS = 60;
@@ -17,8 +18,10 @@ function formatSeconds(s: number) {
 
 /**
  * Six-digit code entry, after sign-up ("signup") and during password reset
- * ("recovery"). The address the code went to comes from `?email=` in the URL,
- * so pages render this inside <Suspense> (Next.js requires it for URL data).
+ * ("recovery"). The email's link works too (see app/auth/confirm); this is
+ * for emails that carry a code. The address the email went to comes from
+ * `?email=` in the URL, so pages render this inside <Suspense> (Next.js
+ * requires it for URL data).
  */
 export function VerifyCodeForm({
   purpose,
@@ -87,10 +90,10 @@ export function VerifyCodeForm({
     const supabase = createClient();
     const { error } =
       purpose === "signup"
-        ? await supabase.auth.resend({ type: "signup", email })
-        : await supabase.auth.resetPasswordForEmail(email);
+        ? await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: emailLinkTarget("signup") } })
+        : await supabase.auth.resetPasswordForEmail(email, { redirectTo: emailLinkTarget("recovery") });
     if (error) setError(authErrorMessage(error));
-    else setNotice("We sent you a new code.");
+    else setNotice("We sent you a new email.");
   };
 
   return (
