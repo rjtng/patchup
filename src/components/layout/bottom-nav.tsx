@@ -17,7 +17,7 @@ const customerTabs = [
 ];
 
 const technicianTabs = [
-  { href: "/jobs", label: "Jobs", icon: BriefcaseBusiness, match: ["/jobs"] },
+  { href: "/jobs", label: "Jobs", icon: BriefcaseBusiness, match: ["/jobs", "/notifications"] },
   { href: "/chat", label: "Chat", icon: MessageCircle, match: ["/chat"] },
   { href: "/profile", label: "Profile", icon: CircleUserRound, match: ["/profile"] },
 ];

@@ -3,15 +3,18 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { turnOffPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/client";
 
-// Signs out on this device only; the person stays signed in elsewhere.
+// Signs out on this device only; the person stays signed in elsewhere. This
+// device stops getting their phone notifications.
 export function LogoutButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
   const logOut = async () => {
     setPending(true);
+    await turnOffPush().catch(() => undefined);
     await createClient().auth.signOut({ scope: "local" });
     router.replace("/welcome");
     router.refresh();

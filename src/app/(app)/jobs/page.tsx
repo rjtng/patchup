@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { PushSettings } from "@/components/notifications/push-settings";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isFinished } from "@/lib/bookings";
@@ -18,7 +20,15 @@ export const metadata: Metadata = { title: "Jobs" };
 export default function JobsPage() {
   return (
     <main className="pb-6">
-      <PageHeader title="Jobs" actions={<RefreshButton />} />
+      <PageHeader
+        title="Jobs"
+        actions={
+          <div className="flex gap-2">
+            <NotificationBell />
+            <RefreshButton />
+          </div>
+        }
+      />
       <Suspense fallback={<CardsSkeleton />}>
         <JobBoard />
       </Suspense>
@@ -91,6 +101,9 @@ async function JobBoard() {
         </Notice>
       )}
       {approved && <AvailabilityToggle technicianId={me} available={profile.is_available} />}
+      {approved && (
+        <PushSettings variant="prompt">Get new requests on this phone, even when PatchUp is closed.</PushSettings>
+      )}
 
       <JobSection title="New requests" jobs={requests} me={me}>
         {approved && profile.is_available

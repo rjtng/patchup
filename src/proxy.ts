@@ -72,7 +72,7 @@ function redirect(request: NextRequest, from: NextResponse, path: string) {
 
 export const config = {
   matcher: [
-    // Every page, but not Next.js internals or static files (images, icons, manifest).
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Every page, but not Next.js internals or static files (images, icons, manifest, service worker).
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

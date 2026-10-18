@@ -8,8 +8,9 @@ import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
+import { PushSettings } from "@/components/notifications/push-settings";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { amountDue, CUSTOMER_CAN_CANCEL, formatPeso, formatSchedule, fullAddress, quoteItems } from "@/lib/bookings";
+import { amountDue, CUSTOMER_CAN_CANCEL, formatPeso, formatSchedule, fullAddress, isFinished, quoteItems } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
 import { CancelBooking } from "./cancel-booking";
@@ -115,6 +116,13 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
           </DetailRow>
         )}
       </section>
+
+      {isCustomer && !isFinished(booking.status) && (
+        <PushSettings variant="prompt">
+          Get updates on this phone, even when PatchUp is closed: when your technician is on the way, when the quote
+          is ready.
+        </PushSettings>
+      )}
 
       <BookingTimeline events={booking.booking_events} />
 

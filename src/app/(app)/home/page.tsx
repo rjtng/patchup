@@ -1,6 +1,7 @@
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { serviceCategories } from "@/lib/services";
 import { Greeting } from "./greeting";
 
@@ -17,13 +18,7 @@ export default function HomePage() {
             </p>
             <p className="text-xl font-bold">What needs fixing today?</p>
           </div>
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className="grid size-12 place-items-center rounded-full bg-white/15 hover:bg-white/25"
-          >
-            <Bell aria-hidden className="size-6" />
-          </Link>
+          <NotificationBell />
         </div>
         <form role="search" action="/search" className="mt-4">
           <label className="flex h-12 items-center gap-3 rounded-full bg-white px-4 text-ink">
