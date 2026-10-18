@@ -6,9 +6,9 @@ booking goes through. The website and the future mobile app both talk to this on
 ```
 supabase/
   migrations/                          changes to the database, applied in order
-    20261018000000_core_schema.sql     tables
-    20261018000100_access_rules.sql    who can read and change what
-    20261018000200_booking_actions.sql the booking steps (accept, quote, complete, ...)
+    20261018082037_core_schema.sql     tables
+    20261018082113_access_rules.sql    who can read and change what
+    20261018082239_booking_actions.sql the booking steps (accept, quote, complete, ...)
   tests/database/                      automated tests for the rules and the booking flow
   config.toml                          settings for the local database
 ```
@@ -50,7 +50,7 @@ requested → accepted → en_route → arrived → quoted → in_progress → c
 Bookings can't be edited directly. Every step is a database function the app calls, for example
 `supabase.rpc('accept_booking', { booking_id })`. Each function checks who is calling and whether
 that step is allowed now, and records it on the timeline. The full list of steps, with who may
-take each one, is at the top of `migrations/20261018000200_booking_actions.sql`.
+take each one, is at the top of `migrations/20261018082239_booking_actions.sql`.
 
 The apps get live updates for `bookings`, `booking_events`, `quotes` and `messages` through Supabase
 Realtime. People only receive the rows they are allowed to read.
@@ -112,4 +112,4 @@ Write the change there, add or update tests, check them with `npx supabase test 
 
 Supabase can give a new table full API access by default, even to signed-out visitors. In the same
 migration, revoke that access, grant back only what the app needs, and turn on row level security,
-the way `20261018000100_access_rules.sql` does for the existing tables.
+the way `20261018082113_access_rules.sql` does for the existing tables.
