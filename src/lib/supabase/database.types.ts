@@ -724,6 +724,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_chat_read: { Args: { booking_id: string }; Returns: undefined }
       mark_en_route: {
         Args: { booking_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
@@ -767,7 +768,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      mark_chat_read: { Args: { booking_id: string }; Returns: undefined }
       mark_notifications_read: { Args: never; Returns: undefined }
       push_forget: { Args: { endpoints: string[] }; Returns: undefined }
       push_public_key: { Args: never; Returns: string }
