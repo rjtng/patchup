@@ -14,9 +14,9 @@ type RowErrors = { description?: string; amount?: string };
 const MAX_ITEMS = 30; // send_quote's limit
 const MAX_AMOUNT = 1_000_000;
 
-/** "1,250.50" -> 1250.5; null if it isn't a price. */
+/** "1,250.50", "₱850" or "P 850" / "Php 850" (as prices are often written) -> a number; null if it isn't a price. */
 function parseAmount(text: string) {
-  const cleaned = text.replace(/[₱,\s]/g, "");
+  const cleaned = text.trim().replace(/^(₱|php|p)/i, "").replace(/[,\s]/g, "");
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   const amount = Number(cleaned);
   return amount <= MAX_AMOUNT ? amount : null;
@@ -45,8 +45,12 @@ export function QuoteForm({ jobId, inspectionFee }: { jobId: string; inspectionF
       if (rowErrors.description || rowErrors.amount) next[row.key] = rowErrors;
     }
     setErrors(next);
+    if (Object.keys(next).length > 0) {
+      // Said again by the button, which may be a long way below the field.
+      setFormError("Check the items above: each needs a description and a price.");
+      return;
+    }
     setFormError(null);
-    if (Object.keys(next).length > 0) return;
 
     setPending(true);
     const { error } = await createClient().rpc("send_quote", {
