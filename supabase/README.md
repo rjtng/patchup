@@ -9,6 +9,9 @@ supabase/
     20261018082037_core_schema.sql     tables
     20261018082113_access_rules.sql    who can read and change what
     20261018082239_booking_actions.sql the booking steps (accept, quote, complete, ...)
+    20261018140443_live_updates.sql    tells open screens when a booking changes
+    20261018150000_notifications.sql   notifications, and handing them to send-push
+  functions/send-push/                 sends phone notifications (Edge Function)
   tests/database/                      automated tests for the rules and the booking flow
   config.toml                          settings for the local database
 ```
@@ -27,6 +30,8 @@ supabase/
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
 | `messages`            | Chat between the customer and the technician                                 |
 | `reviews`             | One star rating per completed booking                                         |
+| `notifications`       | What each person has been told (the bell and Notifications), read or not      |
+| `push_subscriptions`  | Devices that agreed to show phone notifications, and whose they are           |
 
 A profile is created automatically when someone signs up. The app sends `full_name` and `role`
 (`customer` or `technician`) with the sign-up. Nobody can sign up as an admin: you promote people by
@@ -69,6 +74,42 @@ through the API, so the usual access rules decide what it shows. Who may listen 
 `private.can_listen()`, which Realtime checks through a policy on `realtime.messages` when someone
 joins a channel. The tables are also in the `supabase_realtime` publication, for Postgres Changes if
 another app needs them.
+
+## Notifications
+
+Each step of a booking writes notifications for the people it concerns, never the person who took
+the step (`migrations/*_notifications.sql` lists who hears what). A notification shows up on the bell
+right away (it's also announced on the person's `user:` topic) and, if they've turned on phone
+notifications on a device, is sent there by the **send-push** Edge Function
+(`functions/send-push`):
+
+```
+booking step → notification → pg_net → send-push → the browser's push service → the phone
+```
+
+- The database only sends send-push the notification's id. The function picks the notification up
+  once (`push_take_delivery`), encrypts it for each of the person's devices and sends it, signed with
+  PatchUp's key (Web Push, VAPID). It only ever contacts the known push services (Google, Mozilla,
+  Apple, Microsoft), and forgets devices they say are gone.
+- The signing key pair is created by send-push on its first run and kept in `private.push_keys`, so
+  the private key never leaves Supabase. Browsers get the public half from `push_public_key()`.
+- Phone notifications only go out where `private.settings` has `push_function_url` (the hosted
+  project). Set up once:
+
+  ```sql
+  insert into private.settings (name, value)
+  values ('push_function_url', 'https://<project-ref>.supabase.co/functions/v1/send-push');
+  ```
+
+  then deploy the function and call it once with an empty body to create the keys:
+
+  ```bash
+  npx supabase functions deploy send-push --no-verify-jwt
+  curl -X POST https://<project-ref>.supabase.co/functions/v1/send-push -d '{}'
+  ```
+
+  The function checks nothing about its caller: all it can be made to do is deliver a notification
+  that exists and hasn't been delivered yet, to its owner.
 
 ## Set up the hosted project (once)
 

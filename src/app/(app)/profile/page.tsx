@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { PageHeader } from "@/components/layout/page-header";
+import { PushSettings } from "@/components/notifications/push-settings";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isTechnician } from "@/lib/roles";
@@ -18,7 +19,8 @@ export default function ProfilePage() {
       <Suspense fallback={<CardsSkeleton count={2} />}>
         <ProfileDetails />
       </Suspense>
-      <div className="px-6 pt-6">
+      <div className="flex flex-col gap-4 px-6 pt-6">
+        <PushSettings variant="settings" />
         <LogoutButton />
       </div>
     </main>

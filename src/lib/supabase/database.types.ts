@@ -263,6 +263,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          booking_id: string | null
+          created_at: string
+          id: string
+          pushed_at: string | null
+          read_at: string | null
+          title: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          pushed_at?: string | null
+          read_at?: string | null
+          title: string
+          url?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          pushed_at?: string | null
+          read_at?: string | null
+          title?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -289,6 +340,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotes: {
         Row: {
@@ -626,6 +709,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_notifications_read: { Args: never; Returns: undefined }
+      push_forget: { Args: { endpoints: string[] }; Returns: undefined }
+      push_public_key: { Args: never; Returns: string }
+      push_store_keys: {
+        Args: { private_jwk: Json; public_key: string }
+        Returns: string
+      }
+      push_take_delivery: { Args: { notification_id: string }; Returns: Json }
+      remove_push_subscription: {
+        Args: { endpoint: string }
+        Returns: undefined
+      }
+      save_push_subscription: {
+        Args: { subscription: Json }
+        Returns: undefined
+      }
+      send_test_notification: { Args: never; Returns: undefined }
       submit_review: {
         Args: { booking_id: string; comment?: string; rating: number }
         Returns: Database["public"]["Tables"]["reviews"]["Row"]

@@ -76,6 +76,14 @@ the customer's booking follows each step (accepted, on the way, quote to approve
 anyone refreshing. This uses Supabase Realtime (`src/components/live-updates.tsx`); see "Live
 updates" in `supabase/README.md`.
 
+**Notifications:** each step tells the right people: a new request reaches the technicians who could
+take it, the customer hears "accepted", "on the way", "quote ready" and "done", the technician hears
+the customer's answer and any cancellation. They show on the bell (Home, Jobs) and in Notifications,
+and, once someone turns them on (Profile, or the prompt on Jobs and on a booking), on their phone
+even when PatchUp is closed. Phone notifications work in Chrome, Edge and Firefox, including on
+Android; on iPhone, once PatchUp is added to the Home Screen. See "Notifications" in
+`supabase/README.md`.
+
 Every step, and the rules behind them (who may see what, who may take which step and when), is in
 the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
 screens to show (`src/lib/roles.ts`). Places still to connect are marked with `TODO` comments.
@@ -98,13 +106,15 @@ src/
                        EmptyState, CardsSkeleton
     auth/              VerifyCodeForm (shared OTP step)
     bookings/          StatusChip, DetailRow, BookingTimeline, QuoteItems
-    live-updates.tsx   keeps a screen current when the database says a booking changed
+    notifications/     NotificationBell, PushSettings (phone notifications on this device)
+    live-updates.tsx   keeps a screen current when the database says something changed
   lib/                 helpers and data (service categories, onboarding flag, auth messages,
-                       booking labels, visit times and payments, who sees which screens)
+                       booking labels, visit times and payments, who sees which screens,
+                       phone notifications)
     supabase/          Supabase clients for the browser, Server Components and the proxy, and
                        the database's TypeScript types (database.types.ts)
   proxy.ts             who may open which screens; refreshes the session
-public/                app icons
+public/                app icons, and sw.js (the service worker that shows phone notifications)
 supabase/              database: tables, access rules, booking steps, tests
 ```
 
@@ -138,6 +148,6 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Notifications (push and SMS), so technicians hear about new requests with the app closed.
-4. Customers: review the technician after the job; chat, live tracking.
+3. Customers: review the technician after the job; chat, live tracking.
+4. SMS for important notifications (needs an SMS provider such as Semaphore).
 5. An admin dashboard to approve technicians and assign jobs.
