@@ -52,8 +52,23 @@ Bookings can't be edited directly. Every step is a database function the app cal
 that step is allowed now, and records it on the timeline. The full list of steps, with who may
 take each one, is at the top of `migrations/20261018082239_booking_actions.sql`.
 
-The apps get live updates for `bookings`, `booking_events`, `quotes` and `messages` through Supabase
-Realtime. People only receive the rows they are allowed to read.
+## Live updates
+
+When a booking changes, the database tells the people looking at it, so their screens update without
+a refresh (`migrations/*_live_updates.sql`). It uses Realtime's Broadcast from the database on
+private channels:
+
+| Topic                    | Who can listen                                         | Used by            |
+| ------------------------ | ------------------------------------------------------ | ------------------ |
+| `booking:<booking id>`   | anyone who can see the booking                         | a booking's page   |
+| `user:<user id>`         | that person                                            | Bookings, Jobs     |
+| `requests:<category id>` | approved technicians taking jobs in that category      | Jobs (new requests) |
+
+A message only says which booking changed and its new status; the app then reloads the screen
+through the API, so the usual access rules decide what it shows. Who may listen is decided by
+`private.can_listen()`, which Realtime checks through a policy on `realtime.messages` when someone
+joins a channel. The tables are also in the `supabase_realtime` publication, for Postgres Changes if
+another app needs them.
 
 ## Set up the hosted project (once)
 

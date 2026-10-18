@@ -71,6 +71,11 @@ finish with the inspection only. Their Profile tab is their work profile: name, 
 description and the services they get requests for. New technicians wait for PatchUp's approval
 (see "Approve a technician" in `supabase/README.md`).
 
+**Screens update live:** a new request shows up on technicians' Jobs, a taken one disappears, and
+the customer's booking follows each step (accepted, on the way, quote to approve, done) without
+anyone refreshing. This uses Supabase Realtime (`src/components/live-updates.tsx`); see "Live
+updates" in `supabase/README.md`.
+
 Every step, and the rules behind them (who may see what, who may take which step and when), is in
 the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
 screens to show (`src/lib/roles.ts`). Places still to connect are marked with `TODO` comments.
@@ -93,6 +98,7 @@ src/
                        EmptyState, CardsSkeleton
     auth/              VerifyCodeForm (shared OTP step)
     bookings/          StatusChip, DetailRow, BookingTimeline, QuoteItems
+    live-updates.tsx   keeps a screen current when the database says a booking changed
   lib/                 helpers and data (service categories, onboarding flag, auth messages,
                        booking labels, visit times and payments, who sees which screens)
     supabase/          Supabase clients for the browser, Server Components and the proxy, and
@@ -132,7 +138,6 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Live updates (Supabase Realtime), so new requests and status changes appear without a refresh;
-   then notifications.
+3. Notifications (push and SMS), so technicians hear about new requests with the app closed.
 4. Customers: review the technician after the job; chat, live tracking.
 5. An admin dashboard to approve technicians and assign jobs.

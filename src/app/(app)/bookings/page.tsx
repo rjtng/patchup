@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveUpdates } from "@/components/live-updates";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
@@ -26,11 +27,13 @@ export default function BookingsPage() {
 async function BookingList() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
+  const me = auth?.claims.sub ?? "";
   const { data: bookings, error } = await supabase
     .from("bookings")
     .select("id, status, appliance, scheduled_at, service_categories(name)")
-    .eq("customer_id", auth?.claims.sub ?? "")
+    .eq("customer_id", me)
     .order("scheduled_at");
+  const live = <LiveUpdates topics={[`user:${me}`]} />;
 
   if (error) {
     return <p className="px-6 pt-6 text-sm text-danger">We couldn&apos;t load your bookings. Refresh the page to try again.</p>;
@@ -38,6 +41,7 @@ async function BookingList() {
   if (bookings.length === 0) {
     return (
       <>
+        {live}
         <EmptyState icon={CalendarCheck} title="No bookings yet">
           Your upcoming and past repairs will be listed here.
         </EmptyState>
@@ -53,6 +57,7 @@ async function BookingList() {
 
   return (
     <div className="flex flex-col gap-6 px-6 pt-6">
+      {live}
       {[
         { title: "Upcoming", list: upcoming },
         { title: "Past", list: past },

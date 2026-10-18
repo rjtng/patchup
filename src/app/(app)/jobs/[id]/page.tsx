@@ -1,12 +1,14 @@
-import { Banknote, CalendarClock, MapPin, UserRound } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, UserRound } from "lucide-react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveUpdates } from "@/components/live-updates";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { amountDue, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
@@ -47,7 +49,16 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
     .maybeSingle();
   const me = auth?.claims.sub;
   // Open requests, or this technician's own jobs (the access rules hide the rest).
-  if (!job || (job.technician_id !== null && job.technician_id !== me)) notFound();
+  if (!job || (job.technician_id !== null && job.technician_id !== me)) {
+    return (
+      <EmptyState icon={BriefcaseBusiness} title="This job isn't available">
+        Another technician may have taken it, or the customer cancelled.{" "}
+        <Link href="/jobs" className="font-semibold text-brand-navy underline">
+          Back to Jobs
+        </Link>
+      </EmptyState>
+    );
+  }
 
   const mine = job.technician_id === me;
   // The street address is for the technician doing the job; before that, the area is enough to decide.
@@ -57,6 +68,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
+      <LiveUpdates topics={[`booking:${job.id}`]} />
       <section className="rounded-card bg-white p-5 shadow-sm">
         <div className="flex flex-wrap gap-2">
           <StatusChip status={job.status} technician />
