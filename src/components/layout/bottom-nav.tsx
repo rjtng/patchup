@@ -18,7 +18,16 @@ const tabs = [
 // One shared nav for every tab, so the active tab always matches the page
 // (in the Figma file, Home stayed highlighted on every screen).
 export function BottomNav() {
-  const pathname = usePathname();
+  return <Tabs pathname={usePathname()} />;
+}
+
+// Shown while the address isn't known yet (pages for a single booking are
+// built per request): the same tabs, none highlighted.
+export function BottomNavFallback() {
+  return <Tabs pathname={null} />;
+}
+
+function Tabs({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Main"
@@ -26,7 +35,7 @@ export function BottomNav() {
     >
       <ul className="grid grid-cols-5">
         {tabs.map(({ href, label, icon: Icon, match }) => {
-          const active = match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
+          const active = pathname != null && match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
           return (
             <li key={href}>
               <Link

@@ -46,14 +46,22 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/signup` → `/signup/verify`            | Sign up (customer or technician) → 6-digit code     |
 | `/forgot-password` → `/forgot-password/verify` → `/reset-password` | Password reset flow      |
 | `/home`, `/chat`, `/track`, `/bookings`, `/profile` | The five tabs, with the bottom nav          |
-| `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
+| `/services/[slug]`                      | Service category: first available or pick a technician |
+| `/services/[slug]/book`                 | Booking form: the problem, visit time, address       |
+| `/bookings/[id]`                        | A booking: status, details, timeline, cancel         |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
 sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` handles this and keeps
-sessions fresh. The booking screens are still placeholders:
-the database for them is ready in `supabase/` (see [its README](supabase/README.md)), and the places
-still to connect are marked with `TODO` comments.
+sessions fresh.
+
+**Customers can book:** a category page lists the approved technicians who are taking jobs; the
+customer picks one or sends the request to whoever is available, describes the problem, picks a
+visit time (in Manila time) and a saved or new address. Bookings are listed under the Bookings tab,
+and each has its own page with a timeline and a Cancel button. Booking, cancelling and the rules
+behind them (who may see what, when a booking can be cancelled) are in the database, in
+`supabase/` (see [its README](supabase/README.md)). Places still to connect are marked with `TODO`
+comments.
 
 ## Project layout
 
@@ -69,10 +77,14 @@ src/
   components/
     brand/             PatchUp logo
     layout/            AuthScreen, PageHeader, BottomNav
-    ui/                Button, TextField, PasswordField, Checkbox, OtpInput, EmptyState
+    ui/                Button, TextField, TextAreaField, PasswordField, Checkbox, OtpInput,
+                       EmptyState, CardsSkeleton
     auth/              VerifyCodeForm (shared OTP step)
-  lib/                 helpers and data (service categories, onboarding flag, auth messages)
-    supabase/          Supabase clients for the browser and the proxy
+    bookings/          StatusChip
+  lib/                 helpers and data (service categories, onboarding flag, auth messages,
+                       booking labels and visit times)
+    supabase/          Supabase clients for the browser, Server Components and the proxy, and
+                       the database's TypeScript types (database.types.ts)
   proxy.ts             who may open which screens; refreshes the session
 public/                app icons
 supabase/              database: tables, access rules, booking steps, tests
@@ -108,6 +120,7 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Technician list and profile → booking flow (service, date and time, address, confirm).
-4. Bookings list and details, chat, notifications, tracking, reviews.
-5. Technician screens, and an admin dashboard to approve technicians and assign jobs.
+3. Technician screens: accept or decline requests, mark "on the way" and "arrived", send the
+   quote, complete the job.
+4. Customers: approve or decline a quote, review the technician; chat, notifications, live tracking.
+5. An admin dashboard to approve technicians and assign jobs.

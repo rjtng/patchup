@@ -159,6 +159,13 @@ npx supabase migration new add_payments   # creates migrations/<timestamp>_add_p
 Write the change there, add or update tests, check them with `npx supabase test db`, then
 `npx supabase db push` once it's merged.
 
+After pushing, regenerate the app's TypeScript types so its queries are checked against the new
+tables (`npm run build` catches any that no longer match):
+
+```bash
+npx supabase gen types typescript --project-id vfipnxfyzhldhryyrcwe > src/lib/supabase/database.types.ts
+```
+
 Supabase can give a new table full API access by default, even to signed-out visitors. In the same
 migration, revoke that access, grant back only what the app needs, and turn on row level security,
 the way `20261018082113_access_rules.sql` does for the existing tables.
