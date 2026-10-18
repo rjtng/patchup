@@ -1,4 +1,4 @@
-import type { Enums } from "@/lib/supabase/database.types";
+import type { Enums, Json } from "@/lib/supabase/database.types";
 
 export type BookingStatus = Enums<"booking_status">;
 
@@ -40,6 +40,18 @@ export const STATUS: Record<BookingStatus, { label: string; tone: "waiting" | "a
   cancelled: { label: "Cancelled", tone: "cancelled" },
 };
 
+// The same statuses as technicians see them.
+export const TECHNICIAN_STATUS: typeof STATUS = {
+  requested: { label: "New request", tone: "waiting" },
+  accepted: { label: "Accepted", tone: "active" },
+  en_route: { label: "On the way", tone: "active" },
+  arrived: { label: "Arrived", tone: "active" },
+  quoted: { label: "Waiting for approval", tone: "waiting" },
+  in_progress: { label: "Repair in progress", tone: "active" },
+  completed: { label: "Completed", tone: "done" },
+  cancelled: { label: "Cancelled", tone: "cancelled" },
+};
+
 // The booking timeline's steps (booking_events.event).
 export const EVENT_LABELS: Record<string, string> = {
   created: "Booking made",
@@ -59,6 +71,36 @@ export const EVENT_LABELS: Record<string, string> = {
 export const CUSTOMER_CAN_CANCEL: BookingStatus[] = ["requested", "accepted", "en_route"];
 
 export const isFinished = (status: BookingStatus) => status === "completed" || status === "cancelled";
+
+// --- Quotes and payment -------------------------------------------------------
+
+export type QuoteItem = { description: string; amount: number };
+
+/** quotes.items as stored by send_quote: [{ description, amount }, …]. */
+export function quoteItems(items: Json): QuoteItem[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item) =>
+    item && typeof item === "object" && !Array.isArray(item) && typeof item.description === "string" && typeof item.amount === "number"
+      ? [{ description: item.description, amount: item.amount }]
+      : [],
+  );
+}
+
+/** What the customer pays in cash: the inspection fee plus the approved repair, as complete_booking works it out. */
+export function amountDue(booking: { inspection_fee: number; quotes: { status: string; total: number }[] }) {
+  const repair = booking.quotes.filter((q) => q.status === "approved").reduce((sum, q) => sum + q.total, 0);
+  return { inspection: booking.inspection_fee, repair, total: booking.inspection_fee + repair };
+}
+
+// --- Addresses ------------------------------------------------------------------
+
+type BookingAddress = { street: string; barangay: string; city: string; province: string };
+
+export const fullAddress = (b: BookingAddress) => `${b.street}, ${b.barangay}, ${b.city}, ${b.province}`;
+
+/** Opens the address in Google Maps (the app, on phones). */
+export const mapsLink = (b: BookingAddress) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress(b))}`;
 
 // --- Choosing a visit time ---------------------------------------------------
 

@@ -1,13 +1,18 @@
 import { CalendarClock, MapPin, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
+import { DetailRow } from "@/components/bookings/detail-row";
+import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { CUSTOMER_CAN_CANCEL, EVENT_LABELS, formatPeso, formatSchedule } from "@/lib/bookings";
+import { amountDue, CUSTOMER_CAN_CANCEL, formatPeso, formatSchedule, fullAddress, quoteItems } from "@/lib/bookings";
+import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
 import { CancelBooking } from "./cancel-booking";
+import { QuoteResponse } from "./quote-response";
 
 export const metadata: Metadata = { title: "Booking" };
 
@@ -22,6 +27,12 @@ export default function BookingPage({ params }: PageProps<"/bookings/[id]">) {
   );
 }
 
+const QUOTE_STATUS = {
+  pending: { label: "Needs your answer", className: "bg-brand-yellow text-ink" },
+  approved: { label: "Approved", className: "bg-brand-navy/10 text-brand-navy" },
+  declined: { label: "Declined", className: "bg-danger/10 text-danger" },
+};
+
 async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -29,15 +40,17 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at)",
+      "id, status, customer_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
+    .order("created_at", { referencedTable: "quotes" })
     .maybeSingle();
   if (!booking) notFound();
 
   const isCustomer = booking.customer_id === auth?.claims.sub;
   const technicianName = booking.technician?.full_name || null;
+  const due = amountDue(booking);
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -50,54 +63,60 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
 
+      {booking.quotes
+        .slice()
+        .reverse()
+        .map((quote) => (
+          <section key={quote.id} aria-label="Quote" className="rounded-card bg-white p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-ink">Repair quote</h2>
+              <span
+                className={cn("inline-flex rounded-full px-3 py-1 text-xs font-semibold", QUOTE_STATUS[quote.status].className)}
+              >
+                {QUOTE_STATUS[quote.status].label}
+              </span>
+            </div>
+            <QuoteItems items={quoteItems(quote.items)} total={quote.total} />
+            {quote.note && <p className="mt-3 whitespace-pre-line text-sm text-muted">{quote.note}</p>}
+            {isCustomer && quote.status === "pending" && booking.status === "quoted" && (
+              <QuoteResponse quoteId={quote.id} repair={quote.total} inspectionFee={booking.inspection_fee} />
+            )}
+          </section>
+        ))}
+
       <section aria-label="Details" className="flex flex-col gap-4 rounded-card bg-white p-5 text-sm shadow-sm">
-        <Detail icon={CalendarClock} label="Visit">
+        <DetailRow icon={CalendarClock} label="Visit">
           {formatSchedule(booking.scheduled_at)}
-        </Detail>
-        <Detail icon={MapPin} label="Address">
-          {booking.street}, {booking.barangay}, {booking.city}, {booking.province}
+        </DetailRow>
+        <DetailRow icon={MapPin} label="Address">
+          {fullAddress(booking)}
           {booking.landmark && <span className="block text-muted">{booking.landmark}</span>}
-        </Detail>
-        <Detail icon={UserRound} label="Technician">
+        </DetailRow>
+        <DetailRow icon={UserRound} label="Technician">
           {technicianName ?? "Finding one for you"}
-        </Detail>
-        <Detail icon={Wrench} label={booking.final_amount != null ? "Total paid" : "Inspection fee"}>
-          {formatPeso(booking.final_amount ?? booking.inspection_fee)}
-          {booking.final_amount == null && (
+        </DetailRow>
+        {booking.final_amount != null ? (
+          <DetailRow icon={Wrench} label="Total paid">
+            {formatPeso(booking.final_amount)}
+          </DetailRow>
+        ) : due.repair > 0 ? (
+          <DetailRow icon={Wrench} label="To pay when it's done">
+            {formatPeso(due.total)}
+            <span className="block text-muted">
+              {formatPeso(due.inspection)} inspection + {formatPeso(due.repair)} repair, in cash
+            </span>
+          </DetailRow>
+        ) : (
+          <DetailRow icon={Wrench} label="Inspection fee">
+            {formatPeso(booking.inspection_fee)}
             <span className="block text-muted">Cash after the visit. The repair is quoted before it starts.</span>
-          )}
-        </Detail>
+          </DetailRow>
+        )}
       </section>
 
-      <section aria-labelledby="timeline" className="rounded-card bg-white p-5 shadow-sm">
-        <h2 id="timeline" className="text-base font-bold text-ink">
-          Timeline
-        </h2>
-        <ol className="mt-3 flex flex-col gap-3 border-l-2 border-line pl-4">
-          {booking.booking_events.map((e) => (
-            <li key={e.id} className="relative text-sm">
-              <span aria-hidden className="absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full bg-brand-navy" />
-              <span className="block font-semibold text-ink">{EVENT_LABELS[e.event] ?? e.event}</span>
-              <span className="block text-muted">{formatSchedule(e.created_at)}</span>
-              {e.note && <span className="block text-ink">{e.note}</span>}
-            </li>
-          ))}
-        </ol>
-      </section>
+      <BookingTimeline events={booking.booking_events} />
 
       {isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status) && <CancelBooking bookingId={booking.id} />}
-    </div>
-  );
-}
-
-function Detail({ icon: Icon, label, children }: { icon: typeof MapPin; label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-brand-navy" />
-      <div>
-        <p className="font-semibold text-ink">{label}</p>
-        <div className="text-ink">{children}</div>
-      </div>
     </div>
   );
 }
