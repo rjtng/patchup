@@ -24,8 +24,8 @@ Other scripts:
 | `npm start`     | Serve the production build           |
 | `npm run lint`  | Check the code with ESLint           |
 
-GitHub Actions runs `npm run lint` and `npm run build` on every pull request and every push to
-`main` (see `.github/workflows/ci.yml`).
+GitHub Actions runs `npm run lint`, `npm run build` and the database tests on every pull request and
+every push to `main` (see `.github/workflows/ci.yml`).
 
 ## What's built
 
@@ -41,7 +41,8 @@ GitHub Actions runs `npm run lint` and `npm run build` on every pull request and
 | `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
 
 The forms validate input and move to the next screen, but **nothing is saved yet**: every place that
-needs the backend is marked with a `TODO` comment (search the project for `TODO`).
+needs the backend is marked with a `TODO` comment (search the project for `TODO`). The database is
+ready in `supabase/` (see [its README](supabase/README.md)); the screens aren't connected to it yet.
 
 ## Project layout
 
@@ -60,6 +61,7 @@ src/
     auth/              VerifyCodeForm (shared OTP step)
   lib/                 helpers and data (service categories, onboarding flag)
 public/                app icons
+supabase/              database: tables, access rules, booking steps, tests
 ```
 
 ## Design tokens
@@ -89,9 +91,8 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 
 ## Next steps
 
-1. Create a [Supabase](https://supabase.com) project and connect auth (email, phone OTP).
-2. Database tables: profiles (with customer/technician role), technicians, services, bookings,
-   reviews, messages.
+1. Create the Supabase project and upload the database (steps in `supabase/README.md`).
+2. Connect sign-up, log in and password reset to Supabase Auth (email, phone codes).
 3. Technician list and profile → booking flow (service, date and time, address, confirm).
 4. Bookings list and details, chat, notifications, tracking, reviews.
-5. Deploy to [Vercel](https://vercel.com).
+5. Technician screens, and an admin dashboard to approve technicians and assign jobs.
