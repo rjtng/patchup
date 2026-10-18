@@ -154,7 +154,7 @@ select is(
     'Tess Cruz is on the way | Plumbing: Kitchen faucet',
     'Tess Cruz has arrived | Plumbing: Kitchen faucet',
     'Quote ready: ₱850 | Approve it to start the repair. Plumbing: Kitchen faucet',
-    'Job done | Total: ₱1,150, paid in cash. Thanks for using PatchUp!'
+    'Job done | Total: ₱1,150, paid in cash. How did it go? Tap to rate Tess Cruz.'
   ],
   'The customer hears each step: accepted, on the way, arrived, the quote, done'
 );
@@ -380,8 +380,8 @@ select is(
 select is(
   (select public.push_take_delivery(n.id) ->> 'tag' from public.notifications n
    where n.user_id = '00000000-0000-0000-0000-000000000201' and n.booking_id = pg_temp.booking('heater') limit 1),
-  pg_temp.booking('heater')::text,
-  'A booking''s updates share a tag, so the newest replaces the last on the phone'
+  '/jobs/' || pg_temp.booking('heater'),
+  'A booking''s updates share a tag (the screen they open), so the newest replaces the last on the phone'
 );
 select lives_ok($$ select public.push_forget(array['https://fcm.googleapis.com/fcm/send/device-1']) $$, 'The sender forgets dead devices');
 select pg_temp.logout();

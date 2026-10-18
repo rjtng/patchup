@@ -1,4 +1,4 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, UserRound } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, MessageCircle, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,9 +8,12 @@ import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
+import { ReviewItem } from "@/components/reviews/stars";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { amountDue, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems } from "@/lib/bookings";
+import { amountDue, formatDay, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems } from "@/lib/bookings";
+import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
 import { JobActions } from "./job-actions";
@@ -41,7 +44,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at)",
+      "id, status, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -127,6 +130,13 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         </DetailRow>
       </section>
 
+      {mine && job.status !== "cancelled" && (
+        <ButtonLink href={`/chat/${job.id}`} variant="secondary">
+          <MessageCircle aria-hidden className="size-5" />
+          Message {job.customer?.full_name ? firstName(job.customer.full_name) : "the customer"}
+        </ButtonLink>
+      )}
+
       {job.status === "cancelled" && (
         <p className="rounded-card bg-danger/5 p-5 text-sm text-danger">
           This booking was cancelled{job.cancel_reason ? `: ${job.cancel_reason}` : "."}
@@ -154,6 +164,22 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
               {quote.note && <p className="mt-3 whitespace-pre-line text-sm text-muted">{quote.note}</p>}
             </section>
           ))}
+
+      {mine && job.status === "completed" && (
+        <section aria-label="Customer's review" className="flex flex-col gap-2 rounded-card bg-white p-5 shadow-sm">
+          <h2 className="text-base font-bold text-ink">Customer&apos;s review</h2>
+          {job.reviews ? (
+            <ReviewItem
+              rating={job.reviews.rating}
+              comment={job.reviews.comment}
+              by={job.reviews.customer_name || "Customer"}
+              date={formatDay(job.reviews.created_at)}
+            />
+          ) : (
+            <p className="text-sm text-muted">No review yet. Customers are asked to rate the job once it&apos;s done.</p>
+          )}
+        </section>
+      )}
 
       <JobActions
         jobId={job.id}

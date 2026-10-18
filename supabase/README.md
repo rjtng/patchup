@@ -11,6 +11,7 @@ supabase/
     20261018082239_booking_actions.sql the booking steps (accept, quote, complete, ...)
     20261018140443_live_updates.sql    tells open screens when a booking changes
     20261018150000_notifications.sql   notifications, and handing them to send-push
+    20261018230000_reviews_and_chat.sql unread chats, message and review notifications
   functions/send-push/                 sends phone notifications (Edge Function)
   tests/database/                      automated tests for the rules and the booking flow
   config.toml                          settings for the local database
@@ -29,6 +30,7 @@ supabase/
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
 | `messages`            | Chat between the customer and the technician                                 |
+| `chat_reads`          | How far each person has read each chat                                       |
 | `reviews`             | One star rating per completed booking                                         |
 | `notifications`       | What each person has been told (the bell and Notifications), read or not      |
 | `push_subscriptions`  | Devices that agreed to show phone notifications, and whose they are           |
@@ -110,6 +112,23 @@ booking step → notification → pg_net → send-push → the browser's push se
 
   The function checks nothing about its caller: all it can be made to do is deliver a notification
   that exists and hasn't been delivered yet, to its owner.
+
+## Chat and reviews
+
+Each booking with a technician has a chat between the customer and that technician (`messages`).
+The app sends messages by inserting them, which the access rules allow while the booking has a
+technician and isn't cancelled. A technician reads only their own conversation: each message keeps
+the technician whose chat it was in, so if one gives the job back, the next starts with an empty
+chat (the customer still sees everything).
+
+- `chat_conversations()` lists the signed-in person's chats with the last message and how many are
+  unread; `mark_chat_read(booking_id)` marks one read (and its notification).
+- A new message is announced live on `booking:<id>` (event `message`, with only its id), and the
+  other person gets one notification per chat while it's unread ("2 new messages from Ana", with
+  the newest), which also goes to their phone.
+- Customers rate a completed booking once with `submit_review` (1 to 5 stars, optional comment).
+  The technician is notified, and `technician_profiles.rating_avg` / `rating_count` update by
+  themselves. Reviews are public and show only the reviewer's first name.
 
 ## Set up the hosted project (once)
 

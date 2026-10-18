@@ -29,6 +29,13 @@ export function formatSchedule(iso: string) {
   }).format(new Date(iso));
 }
 
+/** "Oct 18, 2026" */
+export function formatDay(iso: string) {
+  return new Intl.DateTimeFormat("en-PH", { timeZone: TIME_ZONE, month: "short", day: "numeric", year: "numeric" }).format(
+    new Date(iso),
+  );
+}
+
 export const STATUS: Record<BookingStatus, { label: string; tone: "waiting" | "active" | "done" | "cancelled" }> = {
   requested: { label: "Finding a technician", tone: "waiting" },
   accepted: { label: "Technician confirmed", tone: "active" },

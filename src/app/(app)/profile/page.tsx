@@ -1,9 +1,11 @@
-import { BriefcaseBusiness, CircleUserRound } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, CircleUserRound } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { PushSettings } from "@/components/notifications/push-settings";
+import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isTechnician } from "@/lib/roles";
@@ -43,7 +45,7 @@ async function ProfileDetails() {
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase
       .from("technician_profiles")
-      .select("bio, city, years_experience, verification_status, technician_services(category_id)")
+      .select("bio, city, years_experience, verification_status, rating_avg, rating_count, technician_services(category_id)")
       .eq("id", claims.sub)
       .maybeSingle(),
     supabase.from("service_categories").select("id, name").order("sort_order"),
@@ -57,12 +59,32 @@ async function ProfileDetails() {
   }
 
   return (
-    <WorkProfileForm
-      technicianId={claims.sub}
-      name={profile?.full_name ?? ""}
-      work={work}
-      services={work.technician_services.map((s) => s.category_id)}
-      categories={categories ?? []}
-    />
+    <>
+      <Link
+        href={`/technicians/${claims.sub}?back=/profile`}
+        className="mx-6 mt-6 flex items-center gap-4 rounded-card bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-ink">Your reviews</span>
+          {work.rating_count > 0 ? (
+            <span className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink">
+              <Stars rating={work.rating_avg} />
+              {work.rating_avg.toFixed(1)} · {work.rating_count === 1 ? "1 review" : `${work.rating_count} reviews`}
+            </span>
+          ) : (
+            <span className="mt-0.5 block text-sm text-muted">None yet. Customers rate each job once it&apos;s done.</span>
+          )}
+          <span className="mt-1 block text-sm text-muted">See your profile as customers see it</span>
+        </span>
+        <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
+      </Link>
+      <WorkProfileForm
+        technicianId={claims.sub}
+        name={profile?.full_name ?? ""}
+        work={work}
+        services={work.technician_services.map((s) => s.category_id)}
+        categories={categories ?? []}
+      />
+    </>
   );
 }

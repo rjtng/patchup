@@ -68,12 +68,10 @@ export async function TechnicianChoices({ slug }: { slug: string }) {
         <ul className="flex flex-col gap-3">
           {technicians.map((t) => {
             const name = t.profiles?.full_name || "PatchUp technician";
+            const profileLink = t.rating_count > 0 ? "See profile and reviews" : "See profile";
             return (
-              <li key={t.id}>
-                <Link
-                  href={`/services/${slug}/book?technician=${t.id}`}
-                  className="flex gap-4 rounded-card bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
-                >
+              <li key={t.id} className="overflow-hidden rounded-card bg-white shadow-sm transition-shadow hover:shadow-md">
+                <Link href={`/services/${slug}/book?technician=${t.id}`} className="flex gap-4 p-4">
                   <span
                     aria-hidden
                     className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-navy/10 text-lg font-bold text-brand-navy"
@@ -97,6 +95,13 @@ export async function TechnicianChoices({ slug }: { slug: string }) {
                     {t.bio && <span className="mt-1 line-clamp-2 block text-sm text-ink">{t.bio}</span>}
                   </span>
                   <ChevronRight aria-hidden className="size-5 shrink-0 self-center text-muted" />
+                </Link>
+                <Link
+                  href={`/technicians/${t.id}?back=/services/${slug}`}
+                  aria-label={`${profileLink} of ${name}`}
+                  className="block border-t border-line px-4 py-3 text-sm font-semibold text-brand-navy hover:bg-surface"
+                >
+                  {profileLink}
                 </Link>
               </li>
             );

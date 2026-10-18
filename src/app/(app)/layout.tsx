@@ -22,5 +22,5 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 async function Nav() {
   if (!supabaseConfig()) return <BottomNav technician={false} />; // no accounts without Supabase
   const { data } = await (await createClient()).auth.getClaims();
-  return <BottomNav technician={isTechnician(data?.claims)} />;
+  return <BottomNav technician={isTechnician(data?.claims)} userId={data?.claims.sub} />;
 }

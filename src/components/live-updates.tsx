@@ -2,13 +2,13 @@
 
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // The database announces changes on Realtime topics (see
-// supabase/migrations/*_live_updates.sql): "booking_changed", and
-// "notification" when someone gets a new one.
-const EVENTS = ["booking_changed", "notification"];
+// supabase/migrations/*_live_updates.sql): "booking_changed", "notification"
+// when someone gets a new one, and "message" in a booking's chat.
+const EVENTS = ["booking_changed", "notification", "message"];
 
 // One channel per topic, shared by everything on the page that follows it
 // (say, the bell and the list it sits on), and kept for a moment after the
@@ -45,19 +45,19 @@ function follow(supabase: SupabaseClient, topic: string, listener: () => void) {
   };
 }
 
-// Topics this browser has followed before: coming back to one (a page Next.js
-// kept from earlier) may have missed changes in between.
-const followedBefore = new Set<string>();
 let auth: Promise<void> | undefined;
 
 /**
- * Keeps a screen current: when one of these topics hears of a change, the
- * screen reloads its data from the server, through the usual access rules.
- * Renders nothing.
+ * Calls `onChange` (once for a burst) when one of these topics hears of a
+ * change, and when the app comes back to the foreground, since phones pause
+ * pages in the background.
  */
-export function LiveUpdates({ topics }: { topics: string[] }) {
-  const router = useRouter();
+export function useLiveTopics(topics: string[], onChange: () => void) {
   const key = topics.join(" ");
+  const latest = useRef(onChange);
+  useEffect(() => {
+    latest.current = onChange;
+  });
 
   useEffect(() => {
     if (!key) return;
@@ -65,24 +65,21 @@ export function LiveUpdates({ topics }: { topics: string[] }) {
     const leaves: (() => void)[] = [];
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
-    // One change is often announced on several topics: reload once.
-    const refresh = () => {
+    // One change is often announced on several topics: react once.
+    const changed = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 250);
+      timer = setTimeout(() => latest.current(), 250);
     };
-    if (followedBefore.has(key)) refresh();
-    followedBefore.add(key);
 
     // Private topics need the signed-in person's token.
     auth ??= supabase.realtime.setAuth();
     auth.then(() => {
       if (stopped) return;
-      for (const topic of key.split(" ")) leaves.push(follow(supabase, topic, refresh));
+      for (const topic of key.split(" ")) leaves.push(follow(supabase, topic, changed));
     });
 
-    // Phones pause pages in the background; catch up when the app is opened again.
     const onVisible = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") changed();
     };
     document.addEventListener("visibilitychange", onVisible);
 
@@ -92,6 +89,30 @@ export function LiveUpdates({ topics }: { topics: string[] }) {
       document.removeEventListener("visibilitychange", onVisible);
       leaves.forEach((leave) => leave());
     };
+  }, [key]);
+}
+
+/**
+ * Keeps a screen current: when one of these topics hears of a change, the
+ * screen reloads its data from the server, through the usual access rules.
+ * Renders nothing.
+ */
+export function LiveUpdates({ topics }: { topics: string[] }) {
+  const router = useRouter();
+  const key = topics.join(" ");
+  useLiveTopics(topics, () => router.refresh());
+
+  // Coming back to a screen Next.js kept from earlier (it keeps this
+  // component, hidden, while you're elsewhere): it may have missed changes.
+  // A screen that has just loaded is already current.
+  const shownBefore = useRef(false);
+  useEffect(() => {
+    if (!key) return;
+    const missed = shownBefore.current;
+    shownBefore.current = true;
+    if (!missed) return;
+    const timer = setTimeout(() => router.refresh(), 250);
+    return () => clearTimeout(timer);
   }, [key, router]);
 
   return null;

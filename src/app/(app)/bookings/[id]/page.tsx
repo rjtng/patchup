@@ -1,5 +1,6 @@
-import { CalendarClock, MapPin, UserRound, Wrench } from "lucide-react";
+import { CalendarClock, MapPin, MessageCircle, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
@@ -9,12 +10,25 @@ import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
+import { Stars } from "@/components/reviews/stars";
+import { ButtonLink } from "@/components/ui/button";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { amountDue, CUSTOMER_CAN_CANCEL, formatPeso, formatSchedule, fullAddress, isFinished, quoteItems } from "@/lib/bookings";
+import {
+  amountDue,
+  CUSTOMER_CAN_CANCEL,
+  formatDay,
+  formatPeso,
+  formatSchedule,
+  fullAddress,
+  isFinished,
+  quoteItems,
+} from "@/lib/bookings";
+import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
 import { CancelBooking } from "./cancel-booking";
 import { QuoteResponse } from "./quote-response";
+import { RateRepair } from "./rate-repair";
 
 export const metadata: Metadata = { title: "Booking" };
 
@@ -42,7 +56,7 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -65,6 +79,20 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      {isCustomer && booking.status === "completed" && !booking.reviews && (
+        <RateRepair bookingId={booking.id} technicianName={technicianName ?? "your technician"} />
+      )}
+      {booking.reviews && (
+        <section aria-label="Your review" className="flex flex-col gap-2 rounded-card bg-white p-5 shadow-sm">
+          <h2 className="text-base font-bold text-ink">Your review</h2>
+          <Stars rating={booking.reviews.rating} />
+          {booking.reviews.comment && (
+            <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{booking.reviews.comment}</p>
+          )}
+          <p className="text-xs text-muted">{formatDay(booking.reviews.created_at)}. Thanks for helping others choose!</p>
+        </section>
+      )}
 
       {booking.quotes
         .slice()
@@ -96,7 +124,16 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
           {booking.landmark && <span className="block text-muted">{booking.landmark}</span>}
         </DetailRow>
         <DetailRow icon={UserRound} label="Technician">
-          {technicianName ?? "Finding one for you"}
+          {booking.technician_id ? (
+            <Link
+              href={`/technicians/${booking.technician_id}?back=/bookings/${booking.id}`}
+              className="font-semibold text-brand-navy underline"
+            >
+              {technicianName ?? "Your technician"}
+            </Link>
+          ) : (
+            "Finding one for you"
+          )}
         </DetailRow>
         {booking.final_amount != null ? (
           <DetailRow icon={Wrench} label="Total paid">
@@ -116,6 +153,13 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
           </DetailRow>
         )}
       </section>
+
+      {isCustomer && booking.technician_id && booking.status !== "cancelled" && (
+        <ButtonLink href={`/chat/${booking.id}`} variant="secondary">
+          <MessageCircle aria-hidden className="size-5" />
+          Message {technicianName ? firstName(technicianName) : "your technician"}
+        </ButtonLink>
+      )}
 
       {isCustomer && !isFinished(booking.status) && (
         <PushSettings variant="prompt">
