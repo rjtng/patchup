@@ -24,6 +24,9 @@ Other scripts:
 | `npm start`     | Serve the production build           |
 | `npm run lint`  | Check the code with ESLint           |
 
+GitHub Actions runs `npm run lint` and `npm run build` on every pull request and every push to
+`main` (see `.github/workflows/ci.yml`).
+
 ## What's built
 
 | Route                                   | Screen                                              |
