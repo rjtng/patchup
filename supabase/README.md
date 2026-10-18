@@ -9,6 +9,9 @@ supabase/
     20261018082037_core_schema.sql     tables
     20261018082113_access_rules.sql    who can read and change what
     20261018082239_booking_actions.sql the booking steps (accept, quote, complete, ...)
+    20261018140443_live_updates.sql    tells open screens when a booking changes
+    20261018150000_notifications.sql   notifications, and handing them to send-push
+  functions/send-push/                 sends phone notifications (Edge Function)
   tests/database/                      automated tests for the rules and the booking flow
   config.toml                          settings for the local database
 ```

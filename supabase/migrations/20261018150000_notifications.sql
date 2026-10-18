@@ -14,13 +14,13 @@
 --   completed                 the customer
 --   cancelled                 whoever didn't cancel it (customer, technician)
 
--- pg_net lets the database call the send-push function. Supabase has it; a
--- database without it (such as the one CI's tests run on) simply doesn't
--- send phone notifications.
+-- pg_net lets the database call the send-push function. Supabase has it,
+-- locally too; a plain Postgres without it simply doesn't send phone
+-- notifications.
 do $$
 begin
   if exists (select 1 from pg_available_extensions where name = 'pg_net') then
-    create extension if not exists pg_net;
+    create extension if not exists pg_net with schema extensions;
   end if;
 end;
 $$;
