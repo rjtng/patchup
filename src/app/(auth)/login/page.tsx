@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { AuthNotice } from "@/components/auth/auth-notice";
 import { AuthScreen } from "@/components/layout/auth-screen";
 import { LoginForm } from "./login-form";
 
@@ -20,6 +22,9 @@ export default function LoginPage() {
         </>
       }
     >
+      <Suspense>
+        <AuthNotice />
+      </Suspense>
       <LoginForm />
     </AuthScreen>
   );

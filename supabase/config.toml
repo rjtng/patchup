@@ -1,0 +1,3 @@
+# Supabase CLI settings for the local database (`npx supabase db start`,
+# `npx supabase test db`). Settings left out here use the CLI's defaults.
+project_id = "patchup"

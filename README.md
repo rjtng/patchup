@@ -2,7 +2,8 @@
 
 A mobile-first web app (PWA) for booking repair services, built from the PatchUp Figma design.
 
-Built with **Next.js 16** (App Router), **React 19**, **TypeScript** and **Tailwind CSS 4**.
+Built with **Next.js 16** (App Router), **React 19**, **TypeScript**, **Tailwind CSS 4** and
+**Supabase** (database and sign-in).
 
 ## Run it
 
@@ -10,6 +11,7 @@ You need [Node.js](https://nodejs.org) 20.9 or newer.
 
 ```bash
 npm install
+cp .env.example .env.local   # Supabase project URL and publishable key
 npm run dev
 ```
 
@@ -24,8 +26,14 @@ Other scripts:
 | `npm start`     | Serve the production build           |
 | `npm run lint`  | Check the code with ESLint           |
 
-GitHub Actions runs `npm run lint` and `npm run build` on every pull request and every push to
-`main` (see `.github/workflows/ci.yml`).
+GitHub Actions runs `npm run lint`, `npm run build` and the database tests on every pull request and
+every push to `main` (see `.github/workflows/ci.yml`).
+
+### Deploying (Vercel)
+
+In the Vercel project, open **Settings → Environment Variables** and add the two variables from
+`.env.example` (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) for
+Production and Preview. They are built into the app, so redeploy after changing them.
 
 ## What's built
 
@@ -40,8 +48,12 @@ GitHub Actions runs `npm run lint` and `npm run build` on every pull request and
 | `/home`, `/chat`, `/track`, `/bookings`, `/profile` | The five tabs, with the bottom nav          |
 | `/services/[slug]`                      | Service category (Plumbing, Electrical, …)          |
 
-The forms validate input and move to the next screen, but **nothing is saved yet**: every place that
-needs the backend is marked with a `TODO` comment (search the project for `TODO`).
+**Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
+password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
+sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` handles this and keeps
+sessions fresh. The booking screens are still placeholders:
+the database for them is ready in `supabase/` (see [its README](supabase/README.md)), and the places
+still to connect are marked with `TODO` comments.
 
 ## Project layout
 
@@ -50,6 +62,7 @@ src/
   app/
     (auth)/            sign-in screens (no bottom nav)
     (app)/             the five tabs and their sub-pages (with bottom nav)
+    auth/confirm/      where email links land (sign-up confirmation, password reset)
     globals.css        design tokens: colors, gradient, font
     layout.tsx         root layout, metadata, phone-width column
     manifest.ts        PWA manifest ("Add to Home Screen")
@@ -58,8 +71,11 @@ src/
     layout/            AuthScreen, PageHeader, BottomNav
     ui/                Button, TextField, PasswordField, Checkbox, OtpInput, EmptyState
     auth/              VerifyCodeForm (shared OTP step)
-  lib/                 helpers and data (service categories, onboarding flag)
+  lib/                 helpers and data (service categories, onboarding flag, auth messages)
+    supabase/          Supabase clients for the browser and the proxy
+  proxy.ts             who may open which screens; refreshes the session
 public/                app icons
+supabase/              database: tables, access rules, booking steps, tests
 ```
 
 ## Design tokens
@@ -89,9 +105,9 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 
 ## Next steps
 
-1. Create a [Supabase](https://supabase.com) project and connect auth (email, phone OTP).
-2. Database tables: profiles (with customer/technician role), technicians, services, bookings,
-   reviews, messages.
+1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
+   templates (see "Sign-in settings" in `supabase/README.md`).
+2. Sign-in with phone codes (needs an SMS provider).
 3. Technician list and profile → booking flow (service, date and time, address, confirm).
 4. Bookings list and details, chat, notifications, tracking, reviews.
-5. Deploy to [Vercel](https://vercel.com).
+5. Technician screens, and an admin dashboard to approve technicians and assign jobs.

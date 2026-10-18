@@ -38,3 +38,17 @@ jobs:
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+  database:
+    name: Database tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts Supabase's Postgres in Docker and applies supabase/migrations.
+      - run: supabase db start
+      - run: supabase test db

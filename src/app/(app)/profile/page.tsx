@@ -1,6 +1,6 @@
-import { CircleUserRound, LogOut } from "lucide-react";
+import { CircleUserRound } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -14,14 +14,7 @@ export default function ProfilePage() {
         Your details, saved addresses, booking history and settings will live here.
       </EmptyState>
       <div className="px-6">
-        {/* TODO: sign out with Supabase Auth before redirecting. */}
-        <Link
-          href="/welcome"
-          className="flex h-14 items-center gap-3 rounded-card bg-white px-5 font-semibold text-danger shadow-sm hover:bg-danger/5"
-        >
-          <LogOut aria-hidden className="size-5" />
-          Log out
-        </Link>
+        <LogoutButton />
       </div>
     </main>
   );

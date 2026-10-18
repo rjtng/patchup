@@ -7,10 +7,13 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordField, TextField } from "@/components/ui/text-field";
+import { authErrorMessage } from "@/lib/auth-errors";
+import { emailLinkTarget } from "@/lib/auth-links";
 import { cn } from "@/lib/cn";
+import { createClient } from "@/lib/supabase/client";
 
 type Role = "customer" | "technician";
-type Errors = Partial<Record<"name" | "account" | "password" | "confirm", string>>;
+type Errors = Partial<Record<"name" | "email" | "password" | "confirm" | "form", string>>;
 
 const roles: Array<{ value: Role; label: string; icon: typeof Home }> = [
   { value: "customer", label: "I need repairs", icon: Home },
@@ -22,25 +25,47 @@ export function SignupForm() {
   const [role, setRole] = useState<Role>("customer");
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const [pending, setPending] = useState(false);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") ?? "").trim();
-    const account = String(data.get("account") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     const confirm = String(data.get("confirm") ?? "");
 
     const next: Errors = {};
     if (!name) next.name = "Enter your full name.";
-    if (!account) next.account = "Enter your email or phone number.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email address.";
     if (password.length < 8) next.password = "Use at least 8 characters.";
     if (confirm !== password) next.confirm = "Passwords don't match.";
     setErrors(next);
     if (Object.keys(next).length > 0) return;
+    setPending(true);
 
-    // TODO: create the account with Supabase Auth (store `role` on the profile).
-    router.push("/signup/verify");
+    // The database creates the profile from `full_name` and `role`.
+    const { data: result, error } = await createClient().auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name, role }, emailRedirectTo: emailLinkTarget("signup") },
+    });
+
+    if (error) {
+      setErrors({ form: authErrorMessage(error) });
+    } else if (result.user?.identities?.length === 0) {
+      // Supabase's sign-up answer for an email that already has an account.
+      setErrors({ form: authErrorMessage({ code: "user_already_exists" }) });
+    } else if (result.session) {
+      // Email confirmation is switched off in Supabase: already signed in.
+      router.replace("/home");
+      router.refresh();
+      return;
+    } else {
+      router.push(`/signup/verify?email=${encodeURIComponent(email)}`);
+      return;
+    }
+    setPending(false);
   };
 
   return (
@@ -82,13 +107,14 @@ export function SignupForm() {
         error={errors.name}
       />
       <TextField
-        name="account"
-        label="Email or phone number"
+        name="email"
+        type="email"
+        label="Email"
         icon={Mail}
         placeholder="you@example.com"
-        autoComplete="username"
+        autoComplete="email"
         inputMode="email"
-        error={errors.account}
+        error={errors.email}
       />
       <PasswordField
         name="password"
@@ -119,8 +145,14 @@ export function SignupForm() {
         </Link>
       </Checkbox>
 
-      <Button type="submit" disabled={!agreed}>
-        {role === "technician" ? "Sign up as a technician" : "Sign up"}
+      {errors.form && (
+        <p role="alert" className="rounded-field bg-danger/5 px-4 py-3 text-sm text-danger">
+          {errors.form}
+        </p>
+      )}
+
+      <Button type="submit" disabled={!agreed || pending}>
+        {pending ? "Creating your account…" : role === "technician" ? "Sign up as a technician" : "Sign up"}
       </Button>
     </form>
   );

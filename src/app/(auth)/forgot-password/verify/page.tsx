@@ -1,17 +1,25 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { VerifyCodeForm } from "@/components/auth/verify-code-form";
 import { AuthScreen } from "@/components/layout/auth-screen";
 
-export const metadata: Metadata = { title: "Enter your code" };
+export const metadata: Metadata = { title: "Check your email" };
 
 export default function ForgotPasswordVerifyPage() {
   return (
     <AuthScreen
       backHref="/forgot-password"
-      title="Enter your code"
-      subtitle="We sent a 6-digit code to your email or phone."
+      title="Check your email"
+      subtitle="Tap the link in the email we sent you, or enter its 6-digit code."
     >
-      <VerifyCodeForm nextHref="/reset-password" submitLabel="Continue" />
+      <Suspense>
+        <VerifyCodeForm
+          purpose="recovery"
+          nextHref="/reset-password"
+          restartHref="/forgot-password"
+          submitLabel="Continue"
+        />
+      </Suspense>
     </AuthScreen>
   );
 }
