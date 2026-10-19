@@ -1,21 +1,22 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, MessageCircle, UserRound } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { ReviewItem } from "@/components/reviews/stars";
 import { LocationSharing } from "@/components/tracking/location-sharing";
-import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { amountDue, formatDay, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems } from "@/lib/bookings";
+import { amountDue, formatDay, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems, UNDER_WAY } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { JobActions } from "./job-actions";
 
@@ -45,7 +46,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -69,6 +70,11 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const assigned = mine && job.status !== "requested";
   const onTheWay = assigned && ["accepted", "en_route", "arrived"].includes(job.status);
   const due = amountDue(job);
+  // The customer's number, while the job is under way (the access rules return it only then).
+  const phone =
+    assigned && UNDER_WAY.includes(job.status)
+      ? ((await supabase.from("phone_numbers").select("phone").eq("user_id", job.customer_id).maybeSingle()).data?.phone ?? null)
+      : null;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -119,6 +125,11 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         {mine && (
           <DetailRow icon={UserRound} label="Customer">
             {job.customer?.full_name || "PatchUp customer"}
+            {phone && (
+              <a href={`tel:${phone}`} className="block w-fit font-semibold text-brand-navy underline">
+                {formatPhone(phone)}
+              </a>
+            )}
           </DetailRow>
         )}
         <DetailRow icon={Banknote} label={job.final_amount != null ? "Collected" : "Customer pays in cash"}>
@@ -139,10 +150,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
       )}
 
       {mine && job.status !== "cancelled" && (
-        <ButtonLink href={`/chat/${job.id}`} variant="secondary">
-          <MessageCircle aria-hidden className="size-5" />
-          Message {job.customer?.full_name ? firstName(job.customer.full_name) : "the customer"}
-        </ButtonLink>
+        <ContactButtons bookingId={job.id} name={job.customer?.full_name || null} phone={phone} fallback="the customer" />
       )}
 
       {job.status === "cancelled" && (

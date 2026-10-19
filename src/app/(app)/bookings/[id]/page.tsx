@@ -1,4 +1,4 @@
-import { CalendarClock, MapPin, MessageCircle, UserRound, Wrench } from "lucide-react";
+import { CalendarClock, MapPin, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,13 +6,13 @@ import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
 import { TripTracker } from "@/components/tracking/trip-tracker";
-import { ButtonLink } from "@/components/ui/button";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import {
   amountDue,
@@ -23,8 +23,8 @@ import {
   fullAddress,
   isFinished,
   quoteItems,
+  UNDER_WAY,
 } from "@/lib/bookings";
-import { firstName } from "@/lib/chat";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
@@ -79,6 +79,12 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         ).data
       : null;
   const technicianName = booking.technician?.full_name || null;
+  // The technician's number, while the job is under way (the access rules return it only then).
+  const phone =
+    isCustomer && booking.technician_id && UNDER_WAY.includes(booking.status)
+      ? ((await supabase.from("phone_numbers").select("phone").eq("user_id", booking.technician_id).maybeSingle()).data
+          ?.phone ?? null)
+      : null;
   const due = amountDue(booking);
 
   return (
@@ -177,10 +183,7 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
       </section>
 
       {isCustomer && booking.technician_id && booking.status !== "cancelled" && (
-        <ButtonLink href={`/chat/${booking.id}`} variant="secondary">
-          <MessageCircle aria-hidden className="size-5" />
-          Message {technicianName ? firstName(technicianName) : "your technician"}
-        </ButtonLink>
+        <ContactButtons bookingId={booking.id} name={technicianName} phone={phone} fallback="your technician" />
       )}
 
       {isCustomer && !isFinished(booking.status) && (

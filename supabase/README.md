@@ -27,6 +27,7 @@ supabase/
 | `technician_services` | Which service categories each technician works in                            |
 | `service_categories`  | Plumbing, Electrical, … with each one's inspection fee                        |
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
+| `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
 | `bookings`            | Repair requests and their current status                                      |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
@@ -160,6 +161,14 @@ add three functions, each of which refuses anyone who isn't an admin:
 Technicians are told when they're approved, turned down or suspended (a trigger on
 `verification_status`, so this also happens when it's changed by hand). When an admin cancels a
 booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
+
+## Phone numbers
+
+Mobile numbers are optional and kept in `phone_numbers` (one per person, stored as
+`+639XXXXXXXXX`), apart from `profiles`, which more people can see. A number is visible to its
+owner, to admins, and to the other side of a booking that's under way: from when the technician
+accepts (or is assigned) until the job is done or cancelled. That's when the job and the booking
+show a Call button.
 
 ## Set up the hosted project (once)
 

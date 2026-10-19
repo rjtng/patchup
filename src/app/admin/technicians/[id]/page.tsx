@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, CalendarClock, ChevronRight, Mail, MapPin, Star, UserRound, Wrench } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, ChevronRight, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,6 +8,7 @@ import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { formatDay, formatSchedule } from "@/lib/bookings";
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
 import { VerificationChip } from "../../verification-chip";
@@ -31,8 +32,9 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: jobs }] = await Promise.all([
+  const [{ data: rows }, { data: phone }, { data: jobs }] = await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
+    supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
     supabase
       .from("bookings")
       .select("id, status, appliance, scheduled_at, service_categories(name)")
@@ -72,6 +74,15 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
             </a>
           ) : (
             "None"
+          )}
+        </DetailRow>
+        <DetailRow icon={Phone} label="Mobile">
+          {phone ? (
+            <a href={`tel:${phone.phone}`} className="font-semibold text-brand-navy underline">
+              {formatPhone(phone.phone)}
+            </a>
+          ) : (
+            "Not given"
           )}
         </DetailRow>
         <DetailRow icon={Wrench} label="Services">

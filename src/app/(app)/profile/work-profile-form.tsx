@@ -5,7 +5,9 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
+import { saveMyName } from "@/lib/account";
 import { cn } from "@/lib/cn";
+import { formatPhone, normalizePhone, saveMyPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/client";
 import type { Enums } from "@/lib/supabase/database.types";
 
@@ -32,18 +34,20 @@ const VERIFICATION: Record<Enums<"verification_status">, { label: string; detail
   },
 };
 
-type Errors = Partial<Record<"name" | "years" | "form", string>>;
+type Errors = Partial<Record<"name" | "phone" | "years" | "form", string>>;
 
 // What customers see about a technician, and the services they get requests for.
 export function WorkProfileForm({
   technicianId,
   name,
+  phone,
   work,
   services,
   categories,
 }: {
   technicianId: string;
   name: string;
+  phone: string | null;
   work: { bio: string; city: string; years_experience: number | null; verification_status: Enums<"verification_status"> };
   services: string[];
   categories: { id: string; name: string }[];
@@ -60,12 +64,15 @@ export function WorkProfileForm({
     const data = new FormData(e.currentTarget);
     const get = (key: string) => String(data.get(key) ?? "").trim();
     const fullName = get("name");
+    const phoneText = get("phone");
+    const newPhone = phoneText ? normalizePhone(phoneText) : null;
     const yearsText = get("years");
     const years = yearsText === "" ? null : Number(yearsText);
     const chosen = data.getAll("services").map(String);
 
     const next: Errors = {};
     if (!fullName) next.name = "Enter your name.";
+    if (phoneText && !newPhone) next.phone = "Enter a Philippine mobile number, like 0917 123 4567.";
     if (years !== null && !(Number.isInteger(years) && years >= 0 && years <= 60)) next.years = "Enter a whole number of years, 0 to 60.";
     setErrors(next);
     setDone(false);
@@ -76,7 +83,8 @@ export function WorkProfileForm({
     const added = chosen.filter((id) => !saved.includes(id));
     const removed = saved.filter((id) => !chosen.includes(id));
     const results = await Promise.all([
-      supabase.from("profiles").update({ full_name: fullName }).eq("id", technicianId),
+      fullName === name ? null : saveMyName(supabase, technicianId, fullName).then((ok) => ({ error: !ok })),
+      newPhone === phone ? null : saveMyPhone(supabase, technicianId, newPhone).then((ok) => ({ error: !ok })),
       supabase
         .from("technician_profiles")
         .update({ bio: get("bio"), city: get("city"), years_experience: years })
@@ -115,6 +123,17 @@ export function WorkProfileForm({
           <p className="mt-1 text-sm text-muted">Customers see this when they choose a technician.</p>
         </div>
         <TextField name="name" label="Name" defaultValue={name} autoComplete="name" maxLength={100} error={errors.name} />
+        <TextField
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          label="Mobile number (optional)"
+          placeholder="e.g. 0917 123 4567"
+          defaultValue={phone ? formatPhone(phone) : ""}
+          hint="Not shown on your profile. Only the customer of a job you're doing sees it, to call you."
+          error={errors.phone}
+        />
         <TextField name="city" label="City where you work" defaultValue={work.city} placeholder="e.g. Pasig" maxLength={100} />
         <TextField
           name="years"
