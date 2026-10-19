@@ -40,7 +40,7 @@ async function BookingFormLoader({
   const technicianId = typeof technicianParam === "string" ? technicianParam : null;
 
   const supabase = await createClient();
-  const [{ data: category }, { data: addresses }, technician] = await Promise.all([
+  const [{ data: category }, { data: addresses }, technician, { data: discount }] = await Promise.all([
     // Read fresh here (not from the cached list), so the fee shown is the one charged.
     supabase
       .from("service_categories")
@@ -55,6 +55,8 @@ async function BookingFormLoader({
     technicianId
       ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
       : Promise.resolve({ data: null }),
+    // What the first-booking offer takes off, if this is their first (booking works it out again).
+    supabase.rpc("first_booking_discount"),
   ]);
   if (!category) notFound();
 
@@ -66,6 +68,7 @@ async function BookingFormLoader({
         technician={technician.data}
         technicianMissing={Boolean(technicianId) && !technician.data}
         addresses={addresses ?? []}
+        discount={discount ?? 0}
         // Read once per request (this server component runs after the cookies
         // above, so it never re-renders), so the visit times offered start from now.
         // eslint-disable-next-line react-hooks/purity

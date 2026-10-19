@@ -1,10 +1,11 @@
 import { Ellipsis, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ServiceIcon } from "@/components/services/service-icon";
 import { getServiceCategories } from "@/lib/services";
+import { FirstBookingOffer } from "./first-booking-offer";
 import { Greeting } from "./greeting";
 
 export const metadata: Metadata = { title: "Home" };
@@ -39,12 +40,9 @@ export default async function HomePage() {
         </form>
       </header>
 
-      <section aria-labelledby="offer" className="mx-6 mt-6 rounded-card bg-brand-yellow p-5 text-brand-navy">
-        <h2 id="offer" className="text-lg font-bold">
-          Today&apos;s offer
-        </h2>
-        <p className="mt-1 text-sm font-medium">Get ₱100 off your first booking.</p>
-      </section>
+      <Suspense>
+        <FirstBookingOffer />
+      </Suspense>
 
       <section aria-labelledby="services" className="mt-6 px-6">
         <h2 id="services" className="text-lg font-bold text-ink">

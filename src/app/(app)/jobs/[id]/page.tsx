@@ -13,7 +13,17 @@ import { ReviewItem } from "@/components/reviews/stars";
 import { LocationSharing } from "@/components/tracking/location-sharing";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { amountDue, formatDay, formatPeso, formatSchedule, fullAddress, mapsLink, quoteItems, UNDER_WAY } from "@/lib/bookings";
+import {
+  amountDue,
+  dueParts,
+  formatDay,
+  formatPeso,
+  formatSchedule,
+  fullAddress,
+  mapsLink,
+  quoteItems,
+  UNDER_WAY,
+} from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
@@ -46,7 +56,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -135,9 +145,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         <DetailRow icon={Banknote} label={job.final_amount != null ? "Collected" : "Customer pays in cash"}>
           {formatPeso(job.final_amount ?? due.total)}
           <span className="block text-muted">
-            {due.repair > 0
-              ? `${formatPeso(due.inspection)} inspection + ${formatPeso(due.repair)} repair`
-              : "Inspection fee"}
+            {due.repair > 0 || due.discount > 0 ? dueParts(due) : "Inspection fee"}
           </span>
         </DetailRow>
       </section>
@@ -202,6 +210,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         status={job.status}
         mine={mine}
         inspectionFee={job.inspection_fee}
+        discount={job.discount}
         amountDue={due.total}
       />
 

@@ -17,6 +17,7 @@ import { CardsSkeleton } from "@/components/ui/skeleton";
 import {
   amountDue,
   CUSTOMER_CAN_CANCEL,
+  dueParts,
   formatDay,
   formatPeso,
   formatSchedule,
@@ -58,7 +59,7 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -138,7 +139,12 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
             <QuoteItems items={quoteItems(quote.items)} total={quote.total} />
             {quote.note && <p className="mt-3 whitespace-pre-line text-sm text-muted">{quote.note}</p>}
             {isCustomer && quote.status === "pending" && booking.status === "quoted" && (
-              <QuoteResponse quoteId={quote.id} repair={quote.total} inspectionFee={booking.inspection_fee} />
+              <QuoteResponse
+                quoteId={quote.id}
+                repair={quote.total}
+                inspectionFee={booking.inspection_fee}
+                discount={booking.discount}
+              />
             )}
           </section>
         ))}
@@ -166,12 +172,18 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         {booking.final_amount != null ? (
           <DetailRow icon={Wrench} label="Total paid">
             {formatPeso(booking.final_amount)}
+            {due.discount > 0 && <span className="block text-muted">{dueParts(due)}</span>}
           </DetailRow>
         ) : due.repair > 0 ? (
           <DetailRow icon={Wrench} label="To pay when it's done">
             {formatPeso(due.total)}
+            <span className="block text-muted">{dueParts(due)}, in cash</span>
+          </DetailRow>
+        ) : due.discount > 0 ? (
+          <DetailRow icon={Wrench} label="To pay after the visit">
+            {formatPeso(due.total)}
             <span className="block text-muted">
-              {formatPeso(due.inspection)} inspection + {formatPeso(due.repair)} repair, in cash
+              {dueParts(due)}, in cash. The repair is quoted before it starts.
             </span>
           </DetailRow>
         ) : (

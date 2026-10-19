@@ -11,7 +11,7 @@ import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { BOOKING_FILTERS } from "@/lib/admin";
-import { amountDue, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
+import { amountDue, dueParts, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
@@ -47,7 +47,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment)",
+      "id, status, customer_id, technician_id, category_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -155,10 +155,15 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
             Open in Maps
           </a>
         </DetailRow>
-        <DetailRow icon={Wrench} label={booking.final_amount != null ? "Total paid" : due.repair > 0 ? "To pay" : "Inspection fee"}>
+        <DetailRow
+          icon={Wrench}
+          label={
+            booking.final_amount != null ? "Total paid" : due.repair > 0 || due.discount > 0 ? "To pay" : "Inspection fee"
+          }
+        >
           {formatPeso(booking.final_amount ?? due.total)}
           <span className="block text-muted">
-            {due.repair > 0 ? `${formatPeso(due.inspection)} inspection + ${formatPeso(due.repair)} repair, in cash` : "In cash"}
+            {due.repair > 0 || due.discount > 0 ? `${dueParts(due)}, in cash` : "In cash"}
           </span>
         </DetailRow>
       </section>

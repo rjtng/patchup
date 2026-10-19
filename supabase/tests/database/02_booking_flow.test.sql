@@ -34,6 +34,9 @@ $$;
 --          ...203 Paz  (waiting for approval, plumbing)
 --          ...204 Rey  (approved, plumbing, not available yet)
 --          ...901 an admin
+-- Totals here are without the first-booking offer (tested in 12_first_booking_offer).
+update public.first_booking_offer set amount = 0;
+
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-000000000101', 'ana@example.com', '{"full_name": "Ana Santos"}'),
   ('00000000-0000-0000-0000-000000000102', 'ben@example.com', '{"full_name": "Ben Reyes"}'),

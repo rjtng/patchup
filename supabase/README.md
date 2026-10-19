@@ -30,6 +30,7 @@ supabase/
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
 | `bookings`            | Repair requests and their current status                                      |
+| `first_booking_offer` | The amount taken off a customer's first booking (0 for none)               |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
 | `messages`            | Chat between the customer and the technician                                 |
@@ -171,6 +172,19 @@ other word (case and accents don't matter; % and _ are just characters). Someone
 name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
+
+## First-booking offer
+
+A customer's first booking (not counting ones they cancelled) has the amount in
+`first_booking_offer` taken off what they pay: ₱100 to start. `create_booking` records it on the
+booking (`bookings.discount`), and `complete_booking` takes it off the inspection fee plus the
+approved repair (never below zero). Change the amount in the Table Editor, or set it to 0 to end the
+offer; bookings already made keep the discount they were made with. Only admins can change it.
+`first_booking_discount()` tells the app what the signed-in customer's next booking would get, so
+Home shows the offer only to customers who haven't booked.
+
+The technician collects the discounted amount in cash, so the offer is ₱100 less for them unless
+PatchUp makes it up; the admin's booking page shows each booking's discount.
 
 ## Services
 

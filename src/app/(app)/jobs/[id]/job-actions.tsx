@@ -4,7 +4,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatPeso, type BookingStatus } from "@/lib/bookings";
+import { formatPeso, payable, type BookingStatus } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/client";
 import { QuoteForm } from "./quote-form";
 
@@ -41,12 +41,15 @@ export function JobActions({
   status,
   mine,
   inspectionFee,
+  discount,
   amountDue,
 }: {
   jobId: string;
   status: BookingStatus;
   mine: boolean;
   inspectionFee: number;
+  /** Taken off what the customer pays (their first-booking offer). */
+  discount: number;
   amountDue: number;
 }) {
   const router = useRouter();
@@ -135,11 +138,11 @@ export function JobActions({
   } else if (status === "arrived") {
     actions = (
       <>
-        <QuoteForm jobId={jobId} inspectionFee={inspectionFee} />
+        <QuoteForm jobId={jobId} inspectionFee={inspectionFee} discount={discount} />
         <p className="mt-2 text-sm text-muted">
           No repair needed, or the customer doesn&apos;t want one? Finish with the inspection only.
         </p>
-        {button("complete", `Finish: inspection only (${formatPeso(inspectionFee)})`, "secondary")}
+        {button("complete", `Finish: inspection only (${formatPeso(payable(inspectionFee, discount))})`, "secondary")}
       </>
     );
   } else if (status === "quoted") {

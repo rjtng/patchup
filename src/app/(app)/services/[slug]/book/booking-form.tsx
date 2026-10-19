@@ -47,12 +47,15 @@ export function BookingForm({
   technician,
   technicianMissing,
   addresses: initialAddresses,
+  discount,
   now,
 }: {
   category: { id: string; name: string; inspection_fee: number };
   technician: { id: string; full_name: string } | null;
   technicianMissing: boolean;
   addresses: Address[];
+  /** The first-booking offer, if this is their first booking. */
+  discount: number;
   now: number;
 }) {
   const router = useRouter();
@@ -298,8 +301,15 @@ export function BookingForm({
             <dt className="text-muted">Inspection fee</dt>
             <dd className="font-semibold text-ink">{formatPeso(category.inspection_fee)}</dd>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">First-booking offer</dt>
+              <dd className="font-semibold text-ink">−{formatPeso(discount)}</dd>
+            </div>
+          )}
         </dl>
         <p className="mt-3 text-muted">
+          {discount > 0 && `As it's your first booking, ${formatPeso(discount)} is taken off what you pay. `}
           Pay in cash after the visit. The technician tells you the price of the repair before starting,
           and you decide whether to go ahead.
         </p>
