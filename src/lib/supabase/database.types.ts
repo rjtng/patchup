@@ -547,6 +547,7 @@ export type Database = {
       }
       service_categories: {
         Row: {
+          icon: string
           id: string
           inspection_fee: number
           is_active: boolean
@@ -555,6 +556,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          icon?: string
           id?: string
           inspection_fee?: number
           is_active?: boolean
@@ -563,6 +565,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          icon?: string
           id?: string
           inspection_fee?: number
           is_active?: boolean

@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { cn } from "@/lib/cn";
 
 const searchHref = (text: string) => (text ? `/search?q=${encodeURIComponent(text)}` : "/search");
@@ -21,6 +21,13 @@ export function SearchBox({ query }: { query: string }) {
     setShowing(query);
     if (!sent.includes(query)) setValue(query);
   }
+
+  // An empty search starts with the cursor in the box. (Not autoFocus: the page
+  // arrives in parts, and the browser would focus a placeholder copy of the box.)
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!query) input.current?.focus();
+  }, [query]);
 
   useEffect(() => {
     const text = value.trim();
@@ -47,13 +54,13 @@ export function SearchBox({ query }: { query: string }) {
         <Search aria-hidden className={cn("size-5 shrink-0 text-brand-navy", pending && "animate-pulse")} />
         <span className="sr-only">Search services and technicians</span>
         <input
+          ref={input}
           name="q"
           type="search"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. aircon, leaking faucet, a name"
           maxLength={100}
-          autoFocus={!query}
           enterKeyHint="search"
           className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
         />
