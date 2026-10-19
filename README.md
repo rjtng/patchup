@@ -73,8 +73,9 @@ them for first) and their own jobs, with a switch for whether they're taking new
 only the area until they accept it; then they get the full address (with a Google Maps link) and
 the customer's name, and step through on the way, arrived, quote (item by item), and done, or
 finish with the inspection only. Their Profile tab is their work profile: name, mobile number, city, experience,
-description and the services they get requests for. New technicians wait for PatchUp's approval
-(see "Approve a technician" in `supabase/README.md`).
+description and the services they get requests for. New technicians wait for PatchUp's approval:
+they send their government ID, NBI clearance and any certificates (photos or PDFs) from Profile,
+which admins check on the technician's Admin page before approving them.
 
 **Screens update live:** a new request shows up on technicians' Jobs, a taken one disappears, and
 the customer's booking follows each step (accepted, on the way, quote to approve, done) without
@@ -118,9 +119,10 @@ tab also has phone notifications and Log out.
 
 **Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
 Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody
-has taken, those waiting over an hour) and the last 7 days. Under Technicians they see each
-technician's sign-up email, services and jobs, and approve, turn down, suspend or reinstate them
-(the technician is told). Under Bookings they give a request to an approved technician, or cancel
+has taken, those waiting over an hour) and the last 7 days. Under Technicians they see who has
+sent their documents, and for each technician the documents themselves (photos shown, PDFs
+linked), their sign-up email, services and jobs; then they approve, turn down, suspend or
+reinstate them (the technician is told). Admins are notified when a technician sends a document. Under Bookings they give a request to an approved technician, or cancel
 a booking with a reason that the customer and technician see. An admin who is also a technician
 keeps their Jobs screens.
 

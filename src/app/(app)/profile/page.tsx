@@ -10,9 +10,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isAdmin } from "@/lib/admin";
+import { withSignedUrls } from "@/lib/documents";
 import { isTechnician } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { DetailsForm } from "./details-form";
+import { Documents } from "./documents";
 import { WorkProfileForm } from "./work-profile-form";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -42,9 +44,14 @@ async function ProfileDetails() {
   if (!claims) return null;
   if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: phone }, { data: work }, { data: categories }] = await Promise.all([
+  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, { data: categories }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
+    supabase
+      .from("technician_documents")
+      .select("id, kind, file_name, size_bytes, uploaded_at, storage_path")
+      .eq("technician_id", claims.sub)
+      .order("uploaded_at"),
     supabase
       .from("technician_profiles")
       .select("bio, city, years_experience, verification_status, rating_avg, rating_count, technician_services(category_id)")
@@ -60,8 +67,19 @@ async function ProfileDetails() {
     );
   }
 
+  const documentsSection = (
+    <Documents
+      technicianId={claims.sub}
+      status={work.verification_status}
+      documents={await withSignedUrls(supabase, documents ?? [])}
+    />
+  );
+  // Until they're approved, sending documents is the thing to do.
+  const documentsFirst = work.verification_status === "pending" || work.verification_status === "rejected";
+
   return (
     <>
+      {documentsFirst && documentsSection}
       <Link
         href={`/technicians/${claims.sub}?back=/profile`}
         className="mx-6 mt-6 flex items-center gap-4 rounded-card bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -88,6 +106,7 @@ async function ProfileDetails() {
         services={work.technician_services.map((s) => s.category_id)}
         categories={categories ?? []}
       />
+      {!documentsFirst && documentsSection}
     </>
   );
 }

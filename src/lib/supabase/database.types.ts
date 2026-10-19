@@ -572,6 +572,47 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_documents: {
+        Row: {
+          content_type: string
+          file_name: string
+          id: string
+          kind: Database["public"]["Enums"]["document_kind"]
+          size_bytes: number
+          storage_path: string
+          technician_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          content_type: string
+          file_name: string
+          id?: string
+          kind: Database["public"]["Enums"]["document_kind"]
+          size_bytes: number
+          storage_path: string
+          technician_id?: string
+          uploaded_at?: string
+        }
+        Update: {
+          content_type?: string
+          file_name?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["document_kind"]
+          size_bytes?: number
+          storage_path?: string
+          technician_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_documents_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technician_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_locations: {
         Row: {
           accuracy: number | null
@@ -904,6 +945,7 @@ export type Database = {
       }
     }
     Enums: {
+      document_kind: "government_id" | "nbi_clearance" | "certificate"
       booking_status:
         | "requested"
         | "accepted"

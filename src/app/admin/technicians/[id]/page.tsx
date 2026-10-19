@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, CalendarClock, ChevronRight, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,6 +8,7 @@ import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { formatDay, formatSchedule } from "@/lib/bookings";
+import { DOCUMENT_KINDS, documentLabel, formatSize, withSignedUrls, type DocumentKind } from "@/lib/documents";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
@@ -32,9 +33,14 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: phone }, { data: jobs }] = await Promise.all([
+  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }] = await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
     supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
+    supabase
+      .from("technician_documents")
+      .select("id, kind, file_name, content_type, size_bytes, uploaded_at, storage_path")
+      .eq("technician_id", id)
+      .order("uploaded_at"),
     supabase
       .from("bookings")
       .select("id, status, appliance, scheduled_at, service_categories(name)")
@@ -63,6 +69,8 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
         </p>
         {t.bio && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{t.bio}</p>}
       </section>
+
+      <DocumentList name={name} documents={await withSignedUrls(supabase, documents ?? [])} />
 
       <VerificationActions technicianId={t.id} name={name} status={t.verification_status} />
 
@@ -148,5 +156,68 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
         )}
       </section>
     </div>
+  );
+}
+
+// What the technician sent to be checked: photos shown, PDFs linked.
+function DocumentList({
+  name,
+  documents,
+}: {
+  name: string;
+  documents: {
+    id: string;
+    kind: DocumentKind;
+    file_name: string;
+    content_type: string;
+    size_bytes: number;
+    uploaded_at: string;
+    url: string | null;
+  }[];
+}) {
+  const missing = DOCUMENT_KINDS.filter((k) => k.required && !documents.some((d) => d.kind === k.kind));
+  return (
+    <section aria-labelledby="documents" className="flex flex-col gap-3">
+      <h2 id="documents" className="text-lg font-bold text-ink">
+        Documents
+      </h2>
+      {missing.length > 0 && (
+        <p className="rounded-card bg-brand-yellow/40 p-4 text-sm text-ink">
+          {documents.length === 0 ? `${name} hasn't sent any documents yet.` : "Not sent yet:"}{" "}
+          {missing.map((k) => k.label).join(" and ")}.
+        </p>
+      )}
+      {documents.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {documents.map((d) => (
+            <li key={d.id} className="rounded-card bg-white p-4 shadow-sm">
+              <p className="font-bold text-ink">{documentLabel(d.kind)}</p>
+              <p className="truncate text-sm text-muted">
+                {d.file_name} · {formatSize(d.size_bytes)} · sent {formatDay(d.uploaded_at)}
+              </p>
+              {d.url && d.content_type.startsWith("image/") ? (
+                <a href={d.url} target="_blank" rel="noreferrer" className="mt-3 block">
+                  {/* A private file behind a short-lived link: shown as is, not through Next's image optimizer (which would cache it). */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={d.url}
+                    alt={`${documentLabel(d.kind)} from ${name}`}
+                    loading="lazy"
+                    className="max-h-72 w-full rounded-field bg-surface object-contain"
+                  />
+                </a>
+              ) : d.url ? (
+                <a href={d.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 font-semibold text-brand-navy underline">
+                  <FileText aria-hidden className="size-5" />
+                  Open the PDF
+                </a>
+              ) : (
+                <p className="mt-2 text-sm text-danger">The file couldn&apos;t be opened. Refresh the page to try again.</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
