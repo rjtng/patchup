@@ -53,6 +53,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/jobs/[id]`                            | A job: accept, on the way, arrived, quote, finish    |
 | `/track`                                | Customers' coming visits, with a live map while the technician is on the way |
 | `/chat/[id]`                            | A booking's chat between the customer and the technician |
+| `/search`                               | Search services and technicians (from Home's search box) |
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
 | `/profile/addresses/new`, `/profile/addresses/[id]` | Add or edit a saved address, with its map pin |
 | `/admin`, `/admin/technicians`, `/admin/bookings` | Admin: overview, approving technicians, assigning and cancelling bookings |
@@ -67,6 +68,12 @@ customer picks one or sends the request to whoever is available, describes the p
 visit time (in Manila time) and a saved or new address. Bookings are listed under the Bookings tab,
 and each has its own page with a timeline and a Cancel button. When the technician sends a
 quote, the customer approves or declines it there.
+
+**Search:** Home's search box opens Search, where results follow as you type. A search can name a
+service or describe the problem, in English or Tagalog ("aircon", "leaking faucet", "tubero",
+"electrician"), and finds that service; the other words (a name, a city) find approved technicians
+by their name, city, description or services, the one searched for by name first, then those
+taking jobs, then the best rated. The words for each service are in `src/lib/search.ts`.
 
 **Technicians do the jobs:** they start on Jobs, which lists new requests (ones a customer asked
 them for first) and their own jobs, with a switch for whether they're taking new jobs. A job shows

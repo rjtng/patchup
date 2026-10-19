@@ -163,6 +163,15 @@ Technicians are told when they're approved, turned down or suspended (a trigger 
 `verification_status`, so this also happens when it's changed by hand). When an admin cancels a
 booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
 
+## Search
+
+`search_technicians(terms, service_slugs)` finds approved technicians for the app's Search: those
+offering one of the services (when given) whose name, city, description or services contain every
+other word (case and accents don't matter; % and _ are just characters). Someone searched for by
+name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
+access, which already lets anyone see approved technicians, and lists only approved ones even for
+admins. The app turns a search into services and words (`src/lib/search.ts`).
+
 ## Phone numbers
 
 Mobile numbers are optional and kept in `phone_numbers` (one per person, stored as
