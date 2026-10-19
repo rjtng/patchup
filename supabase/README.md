@@ -25,7 +25,7 @@ supabase/
 | `profiles`            | Everyone with an account: name and role (customer, technician or admin)      |
 | `technician_profiles` | Technician details: bio, city, availability, approval status, rating         |
 | `technician_services` | Which service categories each technician works in                            |
-| `service_categories`  | Plumbing, Electrical, … with each one's inspection fee                        |
+| `service_categories`  | The services (Plumbing, Electrical, …): name, icon, order, inspection fee, shown or hidden |
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
@@ -171,6 +171,29 @@ other word (case and accents don't matter; % and _ are just characters). Someone
 name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
+
+## Services
+
+The app lists the services from `service_categories`: the active ones (`is_active`), by
+`sort_order` then name, each with its `icon` and `inspection_fee`. Change them in the dashboard's
+Table Editor and the app follows within a minute or two:
+
+- **Rename** one with `name`, or **move** it with `sort_order` (Home shows the first seven, then
+  More for all of them).
+- **Hide** one with `is_active` off: it can't be booked or found any more, but bookings made before
+  still show its name, and technicians keep it on their profile for when it's back.
+- **Add** one with a `slug` (its address, like `pest-control`, lower-case words joined by dashes;
+  don't change it later), a `name`, an `inspection_fee` and a `sort_order`. Technicians who do it
+  tick it on their profile. Search finds it by the words of its name; the other words people use
+  for each service are in `src/lib/search.ts`.
+- **Icon:** one of `air-vent`, `bath`, `brick-wall`, `bug`, `cctv`, `cooking-pot`, `door-open`,
+  `drill`, `droplets`, `fan`, `flame`, `hammer`, `key-round`, `lightbulb`, `microwave`,
+  `paint-roller`, `plug-zap`, `refrigerator`, `shower-head`, `sofa`, `spray-can`, `sprout`,
+  `toolbox`, `truck`, `tv`, `washing-machine`, `wifi` or `wrench` (others show a wrench; the
+  list is in `src/components/services/service-icon.tsx`).
+
+Anyone can read every service, hidden ones included; only admins can add or change them. A service
+that has bookings can't be deleted: hide it instead.
 
 ## Phone numbers
 
