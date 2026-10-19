@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, ChevronRight, CircleUserRound, ShieldCheck } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, MapPin, MapPinCheck, Plus, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,11 +6,13 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isAdmin } from "@/lib/admin";
 import { isTechnician } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { DetailsForm } from "./details-form";
 import { WorkProfileForm } from "./work-profile-form";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -37,16 +39,12 @@ async function ProfileDetails() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const claims = auth?.claims;
-  if (!claims || !isTechnician(claims)) {
-    return (
-      <EmptyState icon={CircleUserRound} title="Your profile">
-        Your details, saved addresses, booking history and settings will live here.
-      </EmptyState>
-    );
-  }
+  if (!claims) return null;
+  if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: work }, { data: categories }] = await Promise.all([
+  const [{ data: profile }, { data: phone }, { data: work }, { data: categories }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
+    supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
     supabase
       .from("technician_profiles")
       .select("bio, city, years_experience, verification_status, rating_avg, rating_count, technician_services(category_id)")
@@ -85,10 +83,79 @@ async function ProfileDetails() {
       <WorkProfileForm
         technicianId={claims.sub}
         name={profile?.full_name ?? ""}
+        phone={phone?.phone ?? null}
         work={work}
         services={work.technician_services.map((s) => s.category_id)}
         categories={categories ?? []}
       />
+    </>
+  );
+}
+
+// A customer's details and saved addresses.
+async function CustomerProfile({ userId, email }: { userId: string; email: string }) {
+  const supabase = await createClient();
+  const [{ data: profile }, { data: phone }, { data: addresses, error }] = await Promise.all([
+    supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    supabase.from("phone_numbers").select("phone").eq("user_id", userId).maybeSingle(),
+    supabase.from("addresses").select("id, label, street, barangay, city, landmark, latitude").order("created_at"),
+  ]);
+
+  return (
+    <>
+      <DetailsForm userId={userId} name={profile?.full_name ?? ""} email={email} phone={phone?.phone ?? null} />
+      <section aria-labelledby="addresses" className="flex flex-col gap-3 px-6 pt-8">
+        <div>
+          <h2 id="addresses" className="text-lg font-bold text-ink">
+            Saved addresses
+          </h2>
+          <p className="mt-1 text-sm text-muted">Pick one when you book.</p>
+        </div>
+        {error ? (
+          <p className="text-sm text-danger">We couldn&apos;t load your addresses. Refresh the page to try again.</p>
+        ) : addresses.length === 0 ? (
+          <p className="rounded-card bg-white p-5 text-sm text-muted shadow-sm">
+            None yet. Add one now, or when you book.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {addresses.map((a) => (
+              <li key={a.id}>
+                <Link
+                  href={`/profile/addresses/${a.id}`}
+                  className="flex items-center gap-4 rounded-card bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold text-ink">{a.label}</span>
+                    <span className="block text-sm text-ink">
+                      {a.street}, {a.barangay}, {a.city}
+                    </span>
+                    {a.landmark && <span className="block text-sm text-muted">{a.landmark}</span>}
+                    <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted">
+                      {a.latitude != null ? (
+                        <>
+                          <MapPinCheck aria-hidden className="size-4 text-brand-navy" />
+                          Pinned on the map
+                        </>
+                      ) : (
+                        <>
+                          <MapPin aria-hidden className="size-4" />
+                          No map pin
+                        </>
+                      )}
+                    </span>
+                  </span>
+                  <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <ButtonLink href="/profile/addresses/new" variant="secondary">
+          <Plus aria-hidden className="size-5" />
+          Add an address
+        </ButtonLink>
+      </section>
     </>
   );
 }

@@ -74,6 +74,10 @@ export const EVENT_LABELS: Record<string, string> = {
   cancelled: "Booking cancelled",
 };
 
+// From accepted until done: while a job is under way, its customer and
+// technician can see each other's mobile number (the access rules decide).
+export const UNDER_WAY: BookingStatus[] = ["accepted", "en_route", "arrived", "quoted", "in_progress"];
+
 // Customers can cancel until the technician arrives (the database enforces it too).
 export const CUSTOMER_CAN_CANCEL: BookingStatus[] = ["requested", "accepted", "en_route"];
 

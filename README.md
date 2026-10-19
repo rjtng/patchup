@@ -54,6 +54,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/track`                                | Customers' coming visits, with a live map while the technician is on the way |
 | `/chat/[id]`                            | A booking's chat between the customer and the technician |
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
+| `/profile/addresses/new`, `/profile/addresses/[id]` | Add or edit a saved address, with its map pin |
 | `/admin`, `/admin/technicians`, `/admin/bookings` | Admin: overview, approving technicians, assigning and cancelling bookings |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
@@ -71,7 +72,7 @@ quote, the customer approves or declines it there.
 them for first) and their own jobs, with a switch for whether they're taking new jobs. A job shows
 only the area until they accept it; then they get the full address (with a Google Maps link) and
 the customer's name, and step through on the way, arrived, quote (item by item), and done, or
-finish with the inspection only. Their Profile tab is their work profile: name, city, experience,
+finish with the inspection only. Their Profile tab is their work profile: name, mobile number, city, experience,
 description and the services they get requests for. New technicians wait for PatchUp's approval
 (see "Approve a technician" in `supabase/README.md`).
 
@@ -108,6 +109,12 @@ MapTiler API key (in MapTiler, limit the key to PatchUp's web addresses). Withou
 falls back to OpenStreetMap's own tiles, which are only meant for light use. MapTiler's free plan
 is for non-commercial use and requires its logo on the map (shown, bottom left); once PatchUp has
 real customers, move to a paid plan (Flex). See `MAP_TILES` in `src/lib/tracking.ts`.
+
+**Profile:** customers keep their name and mobile number there, and their saved addresses: add,
+edit or delete them, and pin each one on the map by tapping it (or with the phone's location). The
+technician doing a job and its customer can call each other while the job is under way, if they've
+given a number (technicians add theirs on their work profile); nobody else sees it. The Profile
+tab also has phone notifications and Log out.
 
 **Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
 Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody

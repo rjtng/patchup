@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarClock, Mail, MapPin, UserRound, Wrench } from "lucide-react";
+import { CalendarCheck, CalendarClock, Mail, MapPin, Phone, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { BOOKING_FILTERS } from "@/lib/admin";
 import { amountDue, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
 import { AdminCancel } from "./admin-cancel";
@@ -64,8 +65,9 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   }
 
   const people = [booking.customer_id, booking.technician_id].filter((p): p is string => p !== null);
-  const [{ data: emails }, { data: technicians }] = await Promise.all([
+  const [{ data: emails }, { data: phones }, { data: technicians }] = await Promise.all([
     supabase.rpc("admin_emails", { user_ids: people }),
+    supabase.from("phone_numbers").select("user_id, phone").in("user_id", people),
     // Who could do it: approved technicians in this service.
     booking.status === "requested"
       ? supabase
@@ -76,6 +78,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       : Promise.resolve({ data: null }),
   ]);
   const emailOf = (userId: string | null) => emails?.find((e) => e.id === userId)?.email ?? null;
+  const phoneOf = (userId: string | null) => phones?.find((p) => p.user_id === userId)?.phone ?? null;
   const list = BOOKING_FILTERS.find((f) => (f.statuses as readonly string[]).includes(booking.status))?.value ?? "open";
   const due = amountDue(booking);
   const customerName = booking.customer?.full_name || "The customer";
@@ -119,6 +122,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         <DetailRow icon={UserRound} label="Customer">
           {customerName}
           <Email address={emailOf(booking.customer_id)} />
+          <PhoneNumber phone={phoneOf(booking.customer_id)} />
         </DetailRow>
         <DetailRow icon={Wrench} label={booking.status === "requested" && booking.technician_id ? "Asked for" : "Technician"}>
           {booking.technician_id ? (
@@ -127,6 +131,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
                 {technicianName ?? "No name yet"}
               </Link>
               <Email address={emailOf(booking.technician_id)} />
+              <PhoneNumber phone={phoneOf(booking.technician_id)} />
             </>
           ) : (
             "Nobody yet"
@@ -192,6 +197,16 @@ function Email({ address }: { address: string | null }) {
     <a href={`mailto:${address}`} className="flex w-fit items-center gap-1.5 break-all text-brand-navy underline">
       <Mail aria-hidden className="size-4 shrink-0" />
       {address}
+    </a>
+  );
+}
+
+function PhoneNumber({ phone }: { phone: string | null }) {
+  if (!phone) return null;
+  return (
+    <a href={`tel:${phone}`} className="flex w-fit items-center gap-1.5 text-brand-navy underline">
+      <Phone aria-hidden className="size-4 shrink-0" />
+      {formatPhone(phone)}
     </a>
   );
 }

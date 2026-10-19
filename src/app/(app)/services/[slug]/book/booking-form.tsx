@@ -10,7 +10,7 @@ import { formatPeso, isSlotOpen, TIME_SLOTS, upcomingDays, visitTime } from "@/l
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import type { Point } from "@/lib/tracking";
-import { PinAddress } from "./pin-address";
+import { PinAddress } from "@/components/addresses/pin-address";
 
 type Address = {
   id: string;

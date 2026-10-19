@@ -3,12 +3,11 @@
 import "leaflet/dist/leaflet.css";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import { useEffect, useRef } from "react";
-import { MAP_TILES, type Point } from "@/lib/tracking";
+import { addBaseLayer, MANILA, placeIcon, type Leaflet } from "@/components/maps/base";
+import type { Point } from "@/lib/tracking";
 
-type Leaflet = typeof import("leaflet");
-
-// Markers are drawn with HTML (no image files): the technician as a navy dot
-// with their initial, the customer's place as a house pin.
+// The technician is drawn with HTML (no image files): a navy dot with their
+// initial. The customer's place is the shared house pin.
 const escapeHtml = (text: string) =>
   text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -19,14 +18,6 @@ const technicianIcon = (L: Leaflet, initial: string) =>
     iconSize: [36, 36],
     iconAnchor: [18, 18],
   });
-const placeIcon = (L: Leaflet) =>
-  L.divIcon({
-    className: "",
-    html: `<span style="display:grid;place-items:center;width:34px;height:34px;border-radius:9999px 9999px 9999px 0;transform:rotate(-45deg);background:#ffde59;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35)"><svg viewBox="0 0 24 24" width="16" height="16" style="transform:rotate(45deg)" fill="none" stroke="#0f1b3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
-  });
-
 const latLng = (p: Point): [number, number] => [p.latitude, p.longitude];
 
 /**
@@ -54,24 +45,8 @@ export function TripMap({
       if (cancelled || !box.current) return;
       const m = L.map(box.current, { zoomControl: false, attributionControl: true, scrollWheelZoom: false });
       L.control.zoom({ position: "topright" }).addTo(m);
-      L.tileLayer(MAP_TILES.url, { attribution: MAP_TILES.attribution, maxZoom: MAP_TILES.maxZoom }).addTo(m);
-      const { logo } = MAP_TILES;
-      if (logo) {
-        // The tile provider's logo, bottom left (its terms ask for it), above
-        // the credits line, which spans the whole map on a phone.
-        const control = new L.Control({ position: "bottomleft" });
-        control.onAdd = () => {
-          const link = L.DomUtil.create("a");
-          link.href = logo.href;
-          link.target = "_blank";
-          link.rel = "noopener";
-          link.style.marginBottom = "24px";
-          link.innerHTML = `<img src="${logo.src}" alt="${logo.alt}" style="display:block;height:20px;width:auto">`;
-          return link;
-        };
-        control.addTo(m);
-      }
-      m.setView([14.5995, 120.9842], 12); // Manila, until there's something to show
+      addBaseLayer(L, m);
+      m.setView(MANILA, 12); // until there's something to show
       map.current = { L, map: m };
       box.current.dispatchEvent(new Event("patchup:map-ready"));
     });
