@@ -7,26 +7,33 @@ import { createClient } from "@/lib/supabase/client";
 
 // The database announces changes on Realtime topics (see
 // supabase/migrations/*_live_updates.sql): "booking_changed", "notification"
-// when someone gets a new one, and "message" in a booking's chat.
-const EVENTS = ["booking_changed", "notification", "message"];
+// when someone gets a new one, "message" in a booking's chat, and "location"
+// while the technician is on the way.
+const EVENTS = ["booking_changed", "notification", "message", "location"];
+
+// What a screen reloads for by default. The location changes every few
+// seconds during a trip and only the map needs it (see TripTracker).
+const SCREEN_EVENTS = ["booking_changed", "notification", "message"];
 
 // One channel per topic, shared by everything on the page that follows it
 // (say, the bell and the list it sits on), and kept for a moment after the
-// last follower leaves so moving between pages doesn't rejoin.
-type Follow = { channel: RealtimeChannel; listeners: Set<() => void>; leave?: ReturnType<typeof setTimeout> };
+// last follower leaves so moving between pages doesn't rejoin. Listeners get
+// the event, or null after rejoining a dropped connection (anything may
+// have been missed).
+type Listener = (event: string | null) => void;
+type Follow = { channel: RealtimeChannel; listeners: Set<Listener>; leave?: ReturnType<typeof setTimeout> };
 const follows = new Map<string, Follow>();
 
-function follow(supabase: SupabaseClient, topic: string, listener: () => void) {
+function follow(supabase: SupabaseClient, topic: string, listener: Listener) {
   let entry = follows.get(topic);
   if (!entry) {
-    const listeners = new Set<() => void>();
-    const notify = () => listeners.forEach((l) => l());
+    const listeners = new Set<Listener>();
+    const notify = (event: string | null) => listeners.forEach((l) => l(event));
     let joins = 0;
     let channel = supabase.channel(topic, { config: { private: true } });
-    for (const event of EVENTS) channel = channel.on("broadcast", { event }, notify);
+    for (const event of EVENTS) channel = channel.on("broadcast", { event }, () => notify(event));
     channel.subscribe((status) => {
-      // Rejoining after a dropped connection: catch up on anything missed.
-      if (status === "SUBSCRIBED" && joins++ > 0) notify();
+      if (status === "SUBSCRIBED" && joins++ > 0) notify(null);
     });
     entry = { channel, listeners };
     follows.set(topic, entry);
@@ -48,12 +55,13 @@ function follow(supabase: SupabaseClient, topic: string, listener: () => void) {
 let auth: Promise<void> | undefined;
 
 /**
- * Calls `onChange` (once for a burst) when one of these topics hears of a
- * change, and when the app comes back to the foreground, since phones pause
- * pages in the background.
+ * Calls `onChange` (once for a burst) when one of these topics hears of one
+ * of `events`, and when the app comes back to the foreground, since phones
+ * pause pages in the background.
  */
-export function useLiveTopics(topics: string[], onChange: () => void) {
+export function useLiveTopics(topics: string[], onChange: () => void, events: string[] = SCREEN_EVENTS) {
   const key = topics.join(" ");
+  const eventKey = events.join(" ");
   const latest = useRef(onChange);
   useEffect(() => {
     latest.current = onChange;
@@ -63,10 +71,12 @@ export function useLiveTopics(topics: string[], onChange: () => void) {
     if (!key) return;
     const supabase = createClient();
     const leaves: (() => void)[] = [];
+    const wanted = new Set(eventKey.split(" "));
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
     // One change is often announced on several topics: react once.
-    const changed = () => {
+    const changed = (event: string | null = null) => {
+      if (event !== null && !wanted.has(event)) return;
       clearTimeout(timer);
       timer = setTimeout(() => latest.current(), 250);
     };
@@ -89,7 +99,7 @@ export function useLiveTopics(topics: string[], onChange: () => void) {
       document.removeEventListener("visibilitychange", onVisible);
       leaves.forEach((leave) => leave());
     };
-  }, [key]);
+  }, [key, eventKey]);
 }
 
 /**

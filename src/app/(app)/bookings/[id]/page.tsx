@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
+import { TripTracker } from "@/components/tracking/trip-tracker";
 import { ButtonLink } from "@/components/ui/button";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import {
@@ -24,6 +25,7 @@ import {
   quoteItems,
 } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
+import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
 import { CancelBooking } from "./cancel-booking";
@@ -56,7 +58,7 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -65,6 +67,17 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
   if (!booking) notFound();
 
   const isCustomer = booking.customer_id === auth?.claims.sub;
+  // Where the technician is, while they're on the way (see TripTracker).
+  const trip =
+    isCustomer && booking.status === "en_route"
+      ? (
+          await supabase
+            .from("technician_locations")
+            .select("latitude, longitude, accuracy, updated_at")
+            .eq("booking_id", booking.id)
+            .maybeSingle()
+        ).data
+      : null;
   const technicianName = booking.technician?.full_name || null;
   const due = amountDue(booking);
 
@@ -79,6 +92,15 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      {isCustomer && booking.status === "en_route" && (
+        <TripTracker
+          bookingId={booking.id}
+          technicianName={technicianName}
+          destination={pin(booking)}
+          initial={trip}
+        />
+      )}
 
       {isCustomer && booking.status === "completed" && !booking.reviews && (
         <RateRepair bookingId={booking.id} technicianName={technicianName ?? "your technician"} />

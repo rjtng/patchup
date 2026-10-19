@@ -9,6 +9,7 @@ import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { ReviewItem } from "@/components/reviews/stars";
+import { LocationSharing } from "@/components/tracking/location-sharing";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
@@ -44,7 +45,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
+      "id, status, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -102,7 +103,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
                   href={mapsLink(job)}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 inline-block font-semibold text-brand-navy underline"
+                  className="mt-1 block w-fit font-semibold text-brand-navy underline"
                 >
                   Open in Google Maps
                 </a>
@@ -129,6 +130,13 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
           </span>
         </DetailRow>
       </section>
+
+      {mine && job.status === "en_route" && (
+        <LocationSharing
+          bookingId={job.id}
+          customerName={job.customer?.full_name ? firstName(job.customer.full_name) : "the customer"}
+        />
+      )}
 
       {mine && job.status !== "cancelled" && (
         <ButtonLink href={`/chat/${job.id}`} variant="secondary">

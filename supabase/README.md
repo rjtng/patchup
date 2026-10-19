@@ -12,6 +12,7 @@ supabase/
     20261018140443_live_updates.sql    tells open screens when a booking changes
     20261018150000_notifications.sql   notifications, and handing them to send-push
     20261018230000_reviews_and_chat.sql unread chats, message and review notifications
+    20261019010000_live_tracking.sql   the technician's location while on the way
   functions/send-push/                 sends phone notifications (Edge Function)
   tests/database/                      automated tests for the rules and the booking flow
   config.toml                          settings for the local database
@@ -31,6 +32,7 @@ supabase/
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
 | `messages`            | Chat between the customer and the technician                                 |
 | `chat_reads`          | How far each person has read each chat                                       |
+| `technician_locations` | Where a technician on the way is now (only during the trip)                 |
 | `reviews`             | One star rating per completed booking                                         |
 | `notifications`       | What each person has been told (the bell and Notifications), read or not      |
 | `push_subscriptions`  | Devices that agreed to show phone notifications, and whose they are           |
@@ -129,6 +131,19 @@ chat (the customer still sees everything).
 - Customers rate a completed booking once with `submit_review` (1 to 5 stars, optional comment).
   The technician is notified, and `technician_profiles.rating_avg` / `rating_count` update by
   themselves. Reviews are public and show only the reviewer's first name.
+
+## Live tracking
+
+While a technician is on the way (`en_route`), their phone calls `share_location(booking_id,
+latitude, longitude, accuracy)` every 10 to 30 seconds. Only the latest position is kept, one row
+per booking in `technician_locations`, and only the booking's customer and technician can read it,
+only during the trip. Updates more often than every 2 seconds are ignored. Each one is announced
+live on `booking:<id>` (event `location`, without the position), and the customer's map reads the
+new position through the access rules. When the booking leaves `en_route` (arrived, given back,
+cancelled), a trigger deletes the row.
+
+The arrival estimate uses the booking's map pin (`latitude`/`longitude`, copied from the address),
+which customers can set from their phone's location when they book.
 
 ## Set up the hosted project (once)
 

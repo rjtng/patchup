@@ -546,6 +546,48 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_locations: {
+        Row: {
+          accuracy: number | null
+          booking_id: string
+          latitude: number
+          longitude: number
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          accuracy?: number | null
+          booking_id: string
+          latitude: number
+          longitude: number
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          accuracy?: number | null
+          booking_id?: string
+          latitude?: number
+          longitude?: number
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_locations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_locations_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_profiles: {
         Row: {
           bio: string
@@ -785,6 +827,15 @@ export type Database = {
         Returns: undefined
       }
       send_test_notification: { Args: never; Returns: undefined }
+      share_location: {
+        Args: {
+          accuracy?: number
+          booking_id: string
+          latitude: number
+          longitude: number
+        }
+        Returns: undefined
+      }
       submit_review: {
         Args: { booking_id: string; comment?: string; rating: number }
         Returns: Database["public"]["Tables"]["reviews"]["Row"]

@@ -105,9 +105,11 @@ type BookingAddress = { street: string; barangay: string; city: string; province
 
 export const fullAddress = (b: BookingAddress) => `${b.street}, ${b.barangay}, ${b.city}, ${b.province}`;
 
-/** Opens the address in Google Maps (the app, on phones). */
-export const mapsLink = (b: BookingAddress) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress(b))}`;
+/** Opens the address in Google Maps (the app, on phones): its map pin if it has one, else the address. */
+export const mapsLink = (b: BookingAddress & { latitude?: number | null; longitude?: number | null }) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    b.latitude != null && b.longitude != null ? `${b.latitude},${b.longitude}` : fullAddress(b),
+  )}`;
 
 // --- Choosing a visit time ---------------------------------------------------
 
