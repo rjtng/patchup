@@ -88,8 +88,26 @@ export type BookingFilter = (typeof BOOKING_FILTERS)[number]["value"];
 export const bookingFilter = (value: unknown): BookingFilter =>
   BOOKING_FILTERS.find((f) => f.value === value)?.value ?? "open";
 
-// A request nobody has taken for this long needs an admin to step in (as admin_overview's stale_requests).
-export const STALE_AFTER_MS = 60 * 60 * 1000;
+const MINUTE = 60_000;
+
+/**
+ * When a request started waiting for a technician: when it was made, or when a
+ * technician last gave it back (as the database's private.waiting_since).
+ */
+export function waitingSince(booking: { created_at: string; booking_events: { event: string; created_at: string }[] }) {
+  const starts = booking.booking_events
+    .filter((e) => e.event === "created" || e.event === "declined")
+    .map((e) => Date.parse(e.created_at));
+  return starts.length > 0 ? Math.max(...starts) : Date.parse(booking.created_at);
+}
+
+/**
+ * When a waiting request needs an admin: 30 minutes on, or once the visit is
+ * less than 2 hours away (but not before 10 minutes have gone by). The
+ * follow-up job tells admins then (private.follow_up_at in the database).
+ */
+export const followUpAt = (since: number, scheduledAt: number) =>
+  Math.min(since + 30 * MINUTE, Math.max(since + 10 * MINUTE, scheduledAt - 120 * MINUTE));
 
 /** How long something has been waiting: "5 min", "2 hr", "3 days". */
 export function formatWaiting(ms: number) {

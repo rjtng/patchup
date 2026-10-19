@@ -59,6 +59,8 @@ requested → accepted → en_route → arrived → quoted → in_progress → c
   new quote or finish with the inspection only).
 - On completion, the amount due is the inspection fee plus the approved quote.
 - Customers can cancel until the technician arrives; after that only an admin can.
+- A request nobody takes is followed up, and cancelled at the visit time if still nobody has it
+  (see "Requests nobody takes" below).
 
 Bookings can't be edited directly. Every step is a database function the app calls, for example
 `supabase.rpc('accept_booking', { booking_id })`. Each function checks who is calling and whether
@@ -156,7 +158,7 @@ through `set_technician_verification`, `assign_technician` and `cancel_booking`.
 add three functions, each of which refuses anyone who isn't an admin:
 
 - `admin_overview()`: the dashboard's counts, as JSON (technicians waiting for approval, requests
-  nobody has taken and those waiting over an hour, jobs in progress, the last 7 days).
+  nobody has taken and those waiting too long, jobs in progress, the last 7 days).
 - `admin_technicians(status, technician_id)`: technicians with their sign-up email, services and
   jobs done (both arguments optional).
 - `admin_emails(user_ids)`: people's sign-up email, to contact them.
@@ -164,6 +166,26 @@ add three functions, each of which refuses anyone who isn't an admin:
 Technicians are told when they're approved, turned down or suspended (a trigger on
 `verification_status`, so this also happens when it's changed by hand). When an admin cancels a
 booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
+
+## Requests nobody takes
+
+Every 5 minutes a pg_cron job, `follow-up-requests`, runs `private.follow_up_requests()`:
+
+- **Waiting too long:** a request without a technician for 30 minutes, or sooner once the visit is
+  less than 2 hours away (but after at least 10 minutes). Admins are notified so they can assign
+  someone, the customer hears that the PatchUp team is helping, and the technicians who could take
+  it are reminded. A request for a chosen technician who hasn't answered opens to the others. This
+  happens once each time a request starts waiting: when it's made, and again if a technician gives
+  it back.
+- **Visit time reached:** a request still without a technician is cancelled ("No technician was
+  free for this time") and the customer is told, with a "Book again" button on the booking that
+  fills in the form from it. A cancelled booking doesn't use up the first-booking offer.
+
+Both are booking steps (`overdue` and `expired`) on the timeline. The admin dashboard counts the
+requests waiting too long by the same rule (`private.follow_up_at`). To change the timings, change
+`private.follow_up_at` in a new migration (and `followUpAt` in `src/lib/admin.ts`). The job's runs
+are in `cron.job_run_details`; `select cron.unschedule('follow-up-requests')` stops it. A database
+without pg_cron (like the plain Postgres the tests can run on) doesn't follow up on its own.
 
 ## Search
 

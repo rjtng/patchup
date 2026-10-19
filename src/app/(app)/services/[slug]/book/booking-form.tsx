@@ -49,6 +49,7 @@ export function BookingForm({
   technicianMissing,
   addresses: initialAddresses,
   discount,
+  initial,
   now,
 }: {
   category: { id: string; name: string; inspection_fee: number };
@@ -57,6 +58,8 @@ export function BookingForm({
   addresses: Address[];
   /** The first-booking offer, if this is their first booking. */
   discount: number;
+  /** Booking again: what they wrote last time, and the saved address it was at. */
+  initial?: { appliance: string; brand: string; problem: string; addressId?: string } | null;
   now: number;
 }) {
   const router = useRouter();
@@ -64,7 +67,7 @@ export function BookingForm({
   const [day, setDay] = useState(() => days.find((d) => d.open)?.value ?? days[0].value);
   const [slot, setSlot] = useState<string | null>(null);
   const [addresses, setAddresses] = useState(initialAddresses);
-  const [addressChoice, setAddressChoice] = useState(initialAddresses[0]?.id ?? NEW_ADDRESS);
+  const [addressChoice, setAddressChoice] = useState(initial?.addressId ?? initialAddresses[0]?.id ?? NEW_ADDRESS);
   const [newPin, setNewPin] = useState<Point | null>(null); // for a new address
   const chosen = addresses.find((a) => a.id === addressChoice);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -163,13 +166,21 @@ export function BookingForm({
         <h2 id="what" className="text-lg font-bold text-ink">
           What needs fixing?
         </h2>
-        <TextField name="appliance" label="Item" placeholder="e.g. Kitchen faucet, aircon, electric fan" error={errors.appliance} />
-        <TextField name="brand" label="Brand (optional)" placeholder="e.g. Carrier, Samsung" />
+        {initial && <p className="text-sm text-muted">Filled in from your last booking. Change anything you need.</p>}
+        <TextField
+          name="appliance"
+          label="Item"
+          placeholder="e.g. Kitchen faucet, aircon, electric fan"
+          defaultValue={initial?.appliance}
+          error={errors.appliance}
+        />
+        <TextField name="brand" label="Brand (optional)" placeholder="e.g. Carrier, Samsung" defaultValue={initial?.brand} />
         <TextAreaField
           name="problem"
           label="What's wrong?"
           placeholder="e.g. Water leaks under the sink whenever the tap is on."
           maxLength={2000}
+          defaultValue={initial?.problem}
           error={errors.problem}
         />
         <div className="flex flex-col gap-1.5">

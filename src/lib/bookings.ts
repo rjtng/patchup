@@ -72,6 +72,9 @@ export const EVENT_LABELS: Record<string, string> = {
   quote_declined: "Quote declined",
   completed: "Job completed",
   cancelled: "Booking cancelled",
+  // From the follow-up on requests nobody takes (see the unanswered requests migration).
+  overdue: "Taking longer than usual; the PatchUp team is helping",
+  expired: "Cancelled: no technician was free",
 };
 
 // From accepted until done: while a job is under way, its customer and

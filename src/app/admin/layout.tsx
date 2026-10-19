@@ -2,6 +2,7 @@ import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -50,15 +51,25 @@ async function AdminOnly({ children }: { children: ReactNode }) {
   }
   return (
     <>
-      <AdminHeader />
+      <AdminHeader bell />
       {children}
     </>
   );
 }
 
-function AdminHeader() {
+// With the bell for admins: requests waiting too long are among their notifications.
+function AdminHeader({ bell = false }: { bell?: boolean }) {
   return (
-    <PageHeader title="Admin" backHref="/profile" actions={<RefreshButton />}>
+    <PageHeader
+      title="Admin"
+      backHref="/profile"
+      actions={
+        <>
+          {bell && <NotificationBell />}
+          <RefreshButton />
+        </>
+      }
+    >
       <AdminTabs />
     </PageHeader>
   );

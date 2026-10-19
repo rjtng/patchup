@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CHIP_TONES, StatusChip } from "@/components/bookings/status-chip";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { BOOKING_FILTERS, bookingFilter, formatWaiting, STALE_AFTER_MS, type BookingFilter } from "@/lib/admin";
+import { BOOKING_FILTERS, bookingFilter, followUpAt, formatWaiting, waitingSince, type BookingFilter } from "@/lib/admin";
 import { formatDay, formatPeso, formatSchedule } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
@@ -48,7 +48,7 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
   const { data: bookings, error } = await supabase
     .from("bookings")
     .select(
-      "id, status, appliance, scheduled_at, created_at, completed_at, cancelled_at, barangay, city, technician_id, final_amount, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name)",
+      "id, status, appliance, scheduled_at, created_at, completed_at, cancelled_at, barangay, city, technician_id, final_amount, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(event, created_at)",
     )
     .in("status", filter.statuses)
     .order(ORDER[show].column, { ascending: ORDER[show].ascending })
@@ -71,7 +71,8 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
         <>
           <ul className="flex flex-col gap-3">
             {bookings.map((b) => {
-              const waited = now - Date.parse(b.created_at);
+              const since = waitingSince(b);
+              const waited = now - since;
               const customer = b.customer?.full_name || "A customer";
               const technician = b.technician?.full_name || (b.technician_id ? "A technician" : null);
               return (
@@ -107,7 +108,7 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
                               "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
                               b.technician_id
                                 ? CHIP_TONES.active
-                                : waited >= STALE_AFTER_MS
+                                : now >= followUpAt(since, Date.parse(b.scheduled_at))
                                   ? CHIP_TONES.cancelled
                                   : CHIP_TONES.waiting,
                             )}

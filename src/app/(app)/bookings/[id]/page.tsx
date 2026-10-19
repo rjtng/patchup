@@ -14,6 +14,7 @@ import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
 import { TripTracker } from "@/components/tracking/trip-tracker";
+import { ButtonLink } from "@/components/ui/button";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
@@ -68,7 +69,7 @@ async function BookingDetails({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -98,6 +99,13 @@ async function BookingDetails({
           ?.phone ?? null)
       : null;
   const due = amountDue(booking);
+  // The follow-up on requests nobody takes: it told admins (still waiting), or cancelled it at the visit time.
+  const waitingSteps = booking.booking_events.filter((e) => ["created", "declined", "overdue"].includes(e.event));
+  const teamHelping = booking.status === "requested" && waitingSteps.at(-1)?.event === "overdue";
+  const expired = booking.booking_events.some((e) => e.event === "expired");
+  // Booking again: whether the first-booking offer still applies (cancelled bookings don't use it up).
+  const offer =
+    isCustomer && booking.status === "cancelled" ? ((await supabase.rpc("first_booking_discount")).data ?? 0) : 0;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -110,6 +118,25 @@ async function BookingDetails({
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      {isCustomer && booking.status === "cancelled" && booking.service_categories && (
+        <section aria-labelledby="book-again" className="rounded-card bg-white p-5 shadow-sm">
+          <h2 id="book-again" className="text-base font-bold text-ink">
+            {expired ? "No technician was free for this time" : "This booking was cancelled"}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {expired
+              ? "Sorry about that. Book again and pick another time."
+              : booking.cancel_reason
+                ? `Reason: ${booking.cancel_reason}`
+                : "Book again whenever you're ready."}
+            {offer > 0 && ` Your first-booking offer still applies: ${formatPeso(offer)} off.`}
+          </p>
+          <ButtonLink href={`/services/${booking.service_categories.slug}/book?again=${booking.id}`} className="mt-4">
+            Book again
+          </ButtonLink>
+        </section>
+      )}
 
       <BookingPhotos
         bookingId={booking.id}
@@ -189,11 +216,18 @@ async function BookingDetails({
             >
               {technicianName ?? "Your technician"}
             </Link>
+          ) : booking.status === "cancelled" ? (
+            "None"
           ) : (
-            "Finding one for you"
+            <>
+              Finding one for you
+              {teamHelping && (
+                <span className="block text-muted">It&apos;s taking longer than usual, so the PatchUp team is helping.</span>
+              )}
+            </>
           )}
         </DetailRow>
-        {booking.final_amount != null ? (
+        {booking.status === "cancelled" ? null : booking.final_amount != null ? (
           <DetailRow icon={Wrench} label="Total paid">
             {formatPeso(booking.final_amount)}
             {due.discount > 0 && <span className="block text-muted">{dueParts(due)}</span>}
