@@ -175,8 +175,9 @@ admins. The app turns a search into services and words (`src/lib/search.ts`).
 ## Services
 
 The app lists the services from `service_categories`: the active ones (`is_active`), by
-`sort_order` then name, each with its `icon` and `inspection_fee`. Change them in the dashboard's
-Table Editor and the app follows within a minute or two:
+`sort_order` then name, each with its `icon` and `inspection_fee`. Admins change them in the app,
+under Admin → Services, and customers see each change right away. They can also be changed in the
+dashboard's Table Editor; the app then follows within a minute or two:
 
 - **Rename** one with `name`, or **move** it with `sort_order` (Home shows the first seven, then
   More for all of them).

@@ -3,42 +3,40 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { getCategory, serviceParams } from "@/lib/services";
+import { getCategory } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { BookingForm } from "./booking-form";
-
-export function generateStaticParams() {
-  return serviceParams();
-}
 
 export async function generateMetadata({ params }: PageProps<"/services/[slug]/book">): Promise<Metadata> {
   const { slug } = await params;
   return { title: `Book ${(await getCategory(slug))?.name.toLowerCase() ?? "a repair"}` };
 }
 
-export default async function BookPage({ params, searchParams }: PageProps<"/services/[slug]/book">) {
-  const { slug } = await params;
-  const category = await getCategory(slug);
-  if (!category) notFound();
-
+export default function BookPage({ params, searchParams }: PageProps<"/services/[slug]/book">) {
   return (
     <main className="pb-6">
-      <PageHeader title={`Book ${category.name.toLowerCase()}`} backHref={`/services/${slug}`} />
-      <Suspense fallback={<CardsSkeleton count={4} />}>
-        <BookingFormLoader slug={slug} searchParams={searchParams} />
+      <Suspense
+        fallback={
+          <>
+            <PageHeader title="Book a repair" backHref="/home" />
+            <CardsSkeleton count={4} />
+          </>
+        }
+      >
+        <BookingFormLoader params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
 async function BookingFormLoader({
-  slug,
+  params,
   searchParams,
 }: {
-  slug: string;
+  params: PageProps<"/services/[slug]/book">["params"];
   searchParams: PageProps<"/services/[slug]/book">["searchParams"];
 }) {
-  const { technician: technicianParam } = await searchParams;
+  const [{ slug }, { technician: technicianParam }] = await Promise.all([params, searchParams]);
   const technicianId = typeof technicianParam === "string" ? technicianParam : null;
 
   const supabase = await createClient();
@@ -61,15 +59,18 @@ async function BookingFormLoader({
   if (!category) notFound();
 
   return (
-    <BookingForm
-      category={category}
-      technician={technician.data}
-      technicianMissing={Boolean(technicianId) && !technician.data}
-      addresses={addresses ?? []}
-      // Read once per request (this server component runs after the cookies
-      // above, so it never re-renders), so the visit times offered start from now.
-      // eslint-disable-next-line react-hooks/purity
-      now={Date.now()}
-    />
+    <>
+      <PageHeader title={`Book ${category.name.toLowerCase()}`} backHref={`/services/${slug}`} />
+      <BookingForm
+        category={category}
+        technician={technician.data}
+        technicianMissing={Boolean(technicianId) && !technician.data}
+        addresses={addresses ?? []}
+        // Read once per request (this server component runs after the cookies
+        // above, so it never re-renders), so the visit times offered start from now.
+        // eslint-disable-next-line react-hooks/purity
+        now={Date.now()}
+      />
+    </>
   );
 }

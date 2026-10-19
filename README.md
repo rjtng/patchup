@@ -57,7 +57,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/search`                               | Search services and technicians (from Home's search box) |
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
 | `/profile/addresses/new`, `/profile/addresses/[id]` | Add or edit a saved address, with its map pin |
-| `/admin`, `/admin/technicians`, `/admin/bookings` | Admin: overview, approving technicians, assigning and cancelling bookings |
+| `/admin`, `/admin/technicians`, `/admin/bookings`, `/admin/services` | Admin: overview, approving technicians, assigning and cancelling bookings, the services |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
@@ -65,8 +65,8 @@ sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` ha
 sessions fresh.
 
 **Services** come from the database: Home shows the first seven and More shows them all, each
-with its icon. Rename, reorder, hide or add one there, with no change to the app (see "Services"
-in `supabase/README.md`).
+with its icon. Admins rename, reorder, hide, re-price or add them under Admin → Services, with no
+change to the app (see "Services" in `supabase/README.md`).
 
 **Customers can book:** a category page lists the approved technicians who are taking jobs; the
 customer picks one or sends the request to whoever is available, describes the problem, picks a
@@ -135,8 +135,9 @@ has taken, those waiting over an hour) and the last 7 days. Under Technicians th
 sent their documents, and for each technician the documents themselves (photos shown, PDFs
 linked), their sign-up email, services and jobs; then they approve, turn down, suspend or
 reinstate them (the technician is told). Admins are notified when a technician sends a document. Under Bookings they give a request to an approved technician, or cancel
-a booking with a reason that the customer and technician see. An admin who is also a technician
-keeps their Jobs screens.
+a booking with a reason that the customer and technician see. Under Services they add services and
+change their name, inspection fee, icon and order, or hide one; customers see each change right
+away. An admin who is also a technician keeps their Jobs screens.
 
 Every step, and the rules behind them (who may see what, who may take which step and when), is in
 the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
