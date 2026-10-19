@@ -9,6 +9,7 @@ const TABS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/technicians", label: "Technicians" },
   { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/services", label: "Services" },
 ];
 
 // The admin section's tabs, under its header (it has no bottom navigation).
@@ -28,7 +29,7 @@ function CurrentTabs() {
 function TabList({ pathname }: { pathname: string | null }) {
   return (
     <nav aria-label="Admin">
-      <ul className="grid grid-cols-3 gap-1 rounded-full bg-white/15 p-1">
+      <ul className="grid grid-cols-4 gap-1 rounded-full bg-white/15 p-1">
         {TABS.map(({ href, label }) => {
           const active =
             pathname !== null &&

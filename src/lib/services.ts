@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { supabaseConfig } from "@/lib/supabase/config";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -15,13 +15,18 @@ export type ServiceCategory = {
   inspection_fee: number;
 };
 
+/** Tags the cached services, so Admin's changes show right away (see admin/services/actions.ts). */
+export const SERVICES_TAG = "services";
+
 /**
  * The services that can be booked, in order. Cached and shared by every
- * page: a change in the database shows within a minute or two.
+ * page: a change made in Admin shows right away, one made in the database
+ * directly within a minute or two.
  */
 export async function getServiceCategories(): Promise<ServiceCategory[]> {
   "use cache";
   cacheLife("minutes");
+  cacheTag(SERVICES_TAG);
 
   const config = supabaseConfig();
   // A build without the Supabase settings (like CI's) has no services to list.
@@ -43,13 +48,4 @@ export async function getServiceCategories(): Promise<ServiceCategory[]> {
 
 export async function getCategory(slug: string) {
   return (await getServiceCategories()).find((c) => c.slug === slug);
-}
-
-/**
- * The service pages to build ahead. A page needs at least one; without the
- * Supabase settings that one is simply not found.
- */
-export async function serviceParams() {
-  const categories = await getServiceCategories();
-  return categories.length > 0 ? categories.map(({ slug }) => ({ slug })) : [{ slug: "plumbing" }];
 }

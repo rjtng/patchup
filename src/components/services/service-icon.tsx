@@ -63,6 +63,12 @@ const ICONS: Record<string, LucideIcon> = {
   wrench: Wrench,
 };
 
+/** The icons a service can have, by name ("air-vent"), in the order Admin offers them. */
+export const SERVICE_ICON_NAMES = Object.keys(ICONS);
+
+/** "air-vent" -> "Air vent" */
+export const iconLabel = (name: string) => (name.charAt(0).toUpperCase() + name.slice(1)).replaceAll("-", " ");
+
 /** A service's icon, by its name; one the app doesn't have shows a wrench. */
 export function ServiceIcon({ name, ...props }: LucideProps & { name: string }) {
   const Icon = ICONS[name] ?? Wrench;
