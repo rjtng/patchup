@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Technician" };
 
 // Where the back arrow goes: the screen that linked here, if it's one of ours.
 function backHref(back: string | string[] | undefined) {
-  return typeof back === "string" && /^\/(home|services|bookings|jobs|profile)(\/[\w-]+)*$/.test(back) ? back : "/home";
+  return typeof back === "string" && /^\/(home|services|bookings|jobs|profile|admin)(\/[\w-]+)*$/.test(back) ? back : "/home";
 }
 
 export default function TechnicianPage({ params, searchParams }: PageProps<"/technicians/[id]">) {

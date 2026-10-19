@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, ChevronRight, CircleUserRound } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, CircleUserRound, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,6 +8,7 @@ import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
+import { isAdmin } from "@/lib/admin";
 import { isTechnician } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { WorkProfileForm } from "./work-profile-form";
@@ -18,6 +19,9 @@ export default function ProfilePage() {
   return (
     <main className="pb-6">
       <PageHeader title="Profile" />
+      <Suspense>
+        <AdminLink />
+      </Suspense>
       <Suspense fallback={<CardsSkeleton count={2} />}>
         <ProfileDetails />
       </Suspense>
@@ -86,5 +90,25 @@ async function ProfileDetails() {
         categories={categories ?? []}
       />
     </>
+  );
+}
+
+// For the people who run PatchUp: the way into the admin screens.
+async function AdminLink() {
+  if (!(await isAdmin(await createClient()))) return null;
+  return (
+    <Link
+      href="/admin"
+      className="mx-6 mt-6 flex items-center gap-4 rounded-card bg-brand-navy p-5 text-white shadow-sm hover:bg-brand-navy-dark"
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white/15">
+        <ShieldCheck aria-hidden className="size-6" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold">Admin</span>
+        <span className="block text-sm text-white/85">Approve technicians, assign and cancel bookings</span>
+      </span>
+      <ChevronRight aria-hidden className="size-5 shrink-0" />
+    </Link>
   );
 }

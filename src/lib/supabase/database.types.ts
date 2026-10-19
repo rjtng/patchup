@@ -683,6 +683,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_emails: {
+        Args: { user_ids: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
+      admin_overview: { Args: never; Returns: Json }
+      admin_technicians: {
+        Args: {
+          status?: Database["public"]["Enums"]["verification_status"]
+          technician_id?: string
+        }
+        Returns: {
+          bio: string
+          city: string
+          email: string
+          full_name: string
+          id: string
+          is_available: boolean
+          joined_at: string
+          jobs_completed: number
+          rating_avg: number
+          rating_count: number
+          services: string[]
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string
+          years_experience: number
+        }[]
+      }
       assign_technician: {
         Args: { booking_id: string; technician_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]

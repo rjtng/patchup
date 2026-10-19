@@ -145,6 +145,22 @@ cancelled), a trigger deletes the row.
 The arrival estimate uses the booking's map pin (`latitude`/`longitude`, copied from the address),
 which customers can set from their phone's location when they book.
 
+## Admin
+
+Admins (`profiles.role = 'admin'`) can already read every booking, profile and message, and act
+through `set_technician_verification`, `assign_technician` and `cancel_booking`. The admin screens
+add three functions, each of which refuses anyone who isn't an admin:
+
+- `admin_overview()`: the dashboard's counts, as JSON (technicians waiting for approval, requests
+  nobody has taken and those waiting over an hour, jobs in progress, the last 7 days).
+- `admin_technicians(status, technician_id)`: technicians with their sign-up email, services and
+  jobs done (both arguments optional).
+- `admin_emails(user_ids)`: people's sign-up email, to contact them.
+
+Technicians are told when they're approved, turned down or suspended (a trigger on
+`verification_status`, so this also happens when it's changed by hand). When an admin cancels a
+booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
+
 ## Set up the hosted project (once)
 
 You need [Node.js](https://nodejs.org) on your computer; the Supabase CLI runs through `npx`.
@@ -171,15 +187,9 @@ You need [Node.js](https://nodejs.org) on your computer; the Supabase CLI runs t
    where id = (select id from auth.users where email = 'you@example.com');
    ```
 
-4. **Approve a technician.** New technicians can't get jobs until they're approved (after you've
-   checked their ID, NBI clearance and certificates). Until there's an admin screen, run:
-
-   ```sql
-   update public.technician_profiles set verification_status = 'approved', verified_at = now()
-   where id = (select id from auth.users where email = 'technician@example.com');
-   ```
-
-   Use `'rejected'` or `'suspended'` (and `is_available = false`) to take someone off.
+4. **Approve technicians.** New technicians can't get jobs until they're approved (after you've
+   checked their ID, NBI clearance and certificates). In the app, go to Profile → Admin →
+   Technicians. Their sign-up email is there, to ask for documents.
 
 The app shows technicians their own screens (Jobs) based on the account type they chose at
 sign-up, kept in their account details. If you ever change someone between customer and technician

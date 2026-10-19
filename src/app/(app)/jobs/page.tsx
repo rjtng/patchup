@@ -12,7 +12,7 @@ import { isFinished } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/server";
 import { AvailabilityToggle } from "./availability-toggle";
 import { JobCard, type Job } from "./job-card";
-import { RefreshButton } from "./refresh-button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata: Metadata = { title: "Jobs" };
 
@@ -50,7 +50,7 @@ async function JobBoard() {
     // requests they could take (while they're taking jobs).
     supabase
       .from("bookings")
-      .select("id, status, technician_id, appliance, scheduled_at, barangay, city, service_categories(name)")
+      .select("id, status, technician_id, category_id, appliance, scheduled_at, barangay, city, service_categories(name)")
       .order("scheduled_at"),
   ]);
 
@@ -66,8 +66,16 @@ async function JobBoard() {
   }
 
   const approved = profile.verification_status === "approved";
+  const services = profile.technician_services.map((s) => s.category_id);
   const requests = jobs
-    .filter((j) => j.status === "requested")
+    // Requests for them, and open ones they could take. (An admin's account
+    // can read every booking, so this keeps to what a technician would see.)
+    .filter(
+      (j) =>
+        j.status === "requested" &&
+        (j.technician_id === me ||
+          (j.technician_id === null && approved && profile.is_available && services.includes(j.category_id))),
+    )
     // Jobs a customer asked this technician for come first.
     .sort((a, b) => Number(b.technician_id === me) - Number(a.technician_id === me));
   const active = jobs.filter((j) => j.technician_id === me && j.status !== "requested" && !isFinished(j.status));
@@ -76,7 +84,7 @@ async function JobBoard() {
   // Their own jobs, and new requests in their services while they're taking jobs.
   const topics = [
     `user:${me}`,
-    ...(approved && profile.is_available ? profile.technician_services.map((s) => `requests:${s.category_id}`) : []),
+    ...(approved && profile.is_available ? services.map((id) => `requests:${id}`) : []),
   ];
 
   return (

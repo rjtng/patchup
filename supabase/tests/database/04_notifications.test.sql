@@ -89,6 +89,8 @@ insert into public.technician_services (technician_id, category_id) values
   ('00000000-0000-0000-0000-000000000202', pg_temp.category('electrical')),
   ('00000000-0000-0000-0000-000000000203', pg_temp.category('plumbing')),
   ('00000000-0000-0000-0000-000000000204', pg_temp.category('plumbing'));
+-- (Approving the technicians told them so; these tests start from no notifications.)
+delete from public.notifications;
 insert into public.addresses (id, user_id, street, barangay, city, province) values
   ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-000000000101', '12 Mabini St', 'San Antonio', 'Pasig', 'Metro Manila'),
   ('00000000-0000-0000-0000-00000000a102', '00000000-0000-0000-0000-000000000102', '5 Rizal Ave', 'Poblacion', 'Makati', 'Metro Manila');
