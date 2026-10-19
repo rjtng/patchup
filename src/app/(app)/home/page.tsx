@@ -27,7 +27,7 @@ export default function HomePage() {
             <input
               name="q"
               type="search"
-              placeholder="Search for a service"
+              placeholder="Search a service or technician"
               className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
             />
           </label>

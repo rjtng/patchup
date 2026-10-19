@@ -884,6 +884,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_technicians: {
+        Args: { max_results?: number; service_slugs?: string[]; terms?: string[] }
+        Returns: {
+          bio: string
+          city: string
+          full_name: string
+          id: string
+          is_available: boolean
+          rating_avg: number
+          rating_count: number
+          services: string[]
+          years_experience: number
+        }[]
+      }
       send_quote: {
         Args: { booking_id: string; items: Json; note?: string }
         Returns: Database["public"]["Tables"]["quotes"]["Row"]
