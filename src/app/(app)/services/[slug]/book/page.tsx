@@ -44,7 +44,10 @@ async function BookingFormLoader({
   const supabase = await createClient();
   const [{ data: category }, { data: addresses }, technician] = await Promise.all([
     supabase.from("service_categories").select("id, name, inspection_fee").eq("slug", slug).maybeSingle(),
-    supabase.from("addresses").select("id, label, street, barangay, city, province, landmark").order("created_at"),
+    supabase
+      .from("addresses")
+      .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
+      .order("created_at"),
     technicianId
       ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
       : Promise.resolve({ data: null }),

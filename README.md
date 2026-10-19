@@ -51,6 +51,9 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/services/[slug]/book`                 | Booking form: the problem, visit time, address       |
 | `/bookings/[id]`                        | A booking: status, details, quote to approve, timeline, cancel |
 | `/jobs/[id]`                            | A job: accept, on the way, arrived, quote, finish    |
+| `/track`                                | Customers' coming visits, with a live map while the technician is on the way |
+| `/chat/[id]`                            | A booking's chat between the customer and the technician |
+| `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
@@ -84,6 +87,25 @@ even when PatchUp is closed. Phone notifications work in Chrome, Edge and Firefo
 Android; on iPhone, once PatchUp is added to the Home Screen. See "Notifications" in
 `supabase/README.md`.
 
+**Chat:** once a technician has the booking, the customer and the technician can message each
+other (Chat tab, or "Message" on the booking or job). Messages arrive live, the Chat tab counts the
+chats with something unread, and each new message is a notification too, on the phone as well.
+If a technician gives the job back, the next one starts with an empty chat.
+
+**Reviews:** when the job is done, the customer rates it (1 to 5 stars and an optional comment) on
+the booking, and the technician hears about it. Reviews, with the reviewer's first name, and the
+average rating show on the technician's profile, which customers reach from the technician list
+and from their booking; technicians see theirs from Profile.
+
+**Live tracking:** when the technician taps "I'm on my way", their phone shares its location every
+few seconds while the job screen is open (it keeps the screen on). The customer follows them on a
+map on the Track tab and on the booking, with the distance and a rough arrival time if their
+address has a map pin (customers can pin an address with their phone's location when booking).
+Sharing stops, and the location is deleted, once the technician arrives. The map uses Leaflet with
+OpenStreetMap's tiles, which are meant for light use: before launch, switch `MAP_TILES` in
+`src/lib/tracking.ts` to a tile provider such as MapTiler or Stadia Maps (both have free plans and
+need an API key).
+
 Every step, and the rules behind them (who may see what, who may take which step and when), is in
 the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
 screens to show (`src/lib/roles.ts`). Places still to connect are marked with `TODO` comments.
@@ -107,10 +129,12 @@ src/
     auth/              VerifyCodeForm (shared OTP step)
     bookings/          StatusChip, DetailRow, BookingTimeline, QuoteItems
     notifications/     NotificationBell, PushSettings (phone notifications on this device)
+    reviews/           Stars, ReviewItem
+    tracking/          TripTracker and TripMap (the customer's map), LocationSharing (the technician's phone)
     live-updates.tsx   keeps a screen current when the database says something changed
   lib/                 helpers and data (service categories, onboarding flag, auth messages,
                        booking labels, visit times and payments, who sees which screens,
-                       phone notifications)
+                       phone notifications, chat times, distances and arrival estimates)
     supabase/          Supabase clients for the browser, Server Components and the proxy, and
                        the database's TypeScript types (database.types.ts)
   proxy.ts             who may open which screens; refreshes the session
@@ -148,6 +172,6 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Customers: review the technician after the job; chat, live tracking.
+3. Switch the map to a tile provider before launch (see "Live tracking" above).
 4. SMS for important notifications (needs an SMS provider such as Semaphore).
 5. An admin dashboard to approve technicians and assign jobs.

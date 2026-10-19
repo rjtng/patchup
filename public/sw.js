@@ -10,17 +10,35 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "PatchUp", {
-      body: data.body || "",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      // A booking's newer update replaces its older one, and still buzzes.
-      tag: data.tag,
-      renotify: Boolean(data.tag),
-      data: { url: data.url || "/notifications" },
-    }),
+    (async () => {
+      // Someone already looking at that screen (say, the chat the message is
+      // in) sees it there. Safari requires a notification for every push, so
+      // there it always shows.
+      if (data.url && !showsEveryPush()) {
+        const windows = await self.clients.matchAll({ type: "window" });
+        const looking = windows.some(
+          (c) => c.focused && c.visibilityState === "visible" && new URL(c.url).pathname === data.url,
+        );
+        if (looking) return;
+      }
+      await self.registration.showNotification(data.title || "PatchUp", {
+        body: data.body || "",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        // A newer notification for the same screen (a booking's updates, a
+        // chat's messages) replaces the older one, and still buzzes.
+        tag: data.tag,
+        renotify: Boolean(data.tag),
+        data: { url: data.url || "/notifications" },
+      });
+    })(),
   );
 });
+
+function showsEveryPush() {
+  const ua = self.navigator.userAgent;
+  return /iPhone|iPad|iPod/.test(ua) || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua));
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

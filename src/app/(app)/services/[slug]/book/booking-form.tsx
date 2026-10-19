@@ -9,8 +9,20 @@ import { TextAreaField, TextField } from "@/components/ui/text-field";
 import { formatPeso, isSlotOpen, TIME_SLOTS, upcomingDays, visitTime } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
+import type { Point } from "@/lib/tracking";
+import { PinAddress } from "./pin-address";
 
-type Address = { id: string; label: string; street: string; barangay: string; city: string; province: string; landmark: string };
+type Address = {
+  id: string;
+  label: string;
+  street: string;
+  barangay: string;
+  city: string;
+  province: string;
+  landmark: string;
+  latitude: number | null;
+  longitude: number | null;
+};
 type Field = "appliance" | "problem" | "when" | "street" | "barangay" | "city" | "province" | "form";
 
 const NEW_ADDRESS = "new";
@@ -49,6 +61,8 @@ export function BookingForm({
   const [slot, setSlot] = useState<string | null>(null);
   const [addresses, setAddresses] = useState(initialAddresses);
   const [addressChoice, setAddressChoice] = useState(initialAddresses[0]?.id ?? NEW_ADDRESS);
+  const [newPin, setNewPin] = useState<Point | null>(null); // for a new address
+  const chosen = addresses.find((a) => a.id === addressChoice);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [pending, setPending] = useState(false);
 
@@ -67,6 +81,7 @@ export function BookingForm({
             city: get("city"),
             province: get("province"),
             landmark: get("landmark"),
+            ...newPin,
           }
         : null;
 
@@ -248,6 +263,28 @@ export function BookingForm({
               placeholder="e.g. Blue gate beside the sari-sari store"
             />
           </div>
+        )}
+        {addressChoice === NEW_ADDRESS ? (
+          <PinAddress
+            pinned={newPin !== null}
+            onPin={async (point) => {
+              setNewPin(point);
+              return null;
+            }}
+          />
+        ) : (
+          chosen && (
+            <PinAddress
+              key={chosen.id}
+              pinned={chosen.latitude != null}
+              onPin={async (point) => {
+                const { error } = await createClient().from("addresses").update(point).eq("id", chosen.id);
+                if (error) return "We couldn't save the pin. Try again.";
+                setAddresses((list) => list.map((a) => (a.id === chosen.id ? { ...a, ...point } : a)));
+                return null;
+              }}
+            />
+          )
         )}
       </fieldset>
 

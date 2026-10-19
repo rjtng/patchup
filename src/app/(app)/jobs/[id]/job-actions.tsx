@@ -55,6 +55,9 @@ export function JobActions({
   const [error, setError] = useState<string | null>(null);
 
   const run = async (step: Step) => {
+    // Leaving for the job: ask for the location now, while the tap counts as
+    // permission to ask, so sharing it (LocationSharing) can start by itself.
+    if (step === "en_route") navigator.geolocation?.getCurrentPosition(() => {}, () => {}, { maximumAge: 60_000 });
     const supabase = createClient();
     const booking_id = jobId;
     setPending(step);

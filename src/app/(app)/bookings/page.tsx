@@ -30,7 +30,7 @@ async function BookingList() {
   const me = auth?.claims.sub ?? "";
   const { data: bookings, error } = await supabase
     .from("bookings")
-    .select("id, status, appliance, scheduled_at, service_categories(name)")
+    .select("id, status, appliance, scheduled_at, service_categories(name), reviews(rating)")
     .eq("customer_id", me)
     .order("scheduled_at");
   const live = <LiveUpdates topics={[`user:${me}`]} />;
@@ -78,7 +78,14 @@ async function BookingList() {
                         {b.service_categories?.name}: {b.appliance}
                       </span>
                       <span className="mt-0.5 block text-sm text-muted">{formatSchedule(b.scheduled_at)}</span>
-                      <StatusChip status={b.status} className="mt-2" />
+                      <span className="mt-2 flex flex-wrap gap-2">
+                        <StatusChip status={b.status} />
+                        {b.status === "completed" && !b.reviews && (
+                          <span className="inline-flex rounded-full bg-brand-yellow px-3 py-1 text-xs font-semibold text-ink">
+                            Rate your repair
+                          </span>
+                        )}
+                      </span>
                     </span>
                     <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
                   </Link>

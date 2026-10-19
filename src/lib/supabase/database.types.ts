@@ -224,6 +224,39 @@ export type Database = {
           },
         ]
       }
+      chat_reads: {
+        Row: {
+          booking_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_reads_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -231,6 +264,7 @@ export type Database = {
           created_at: string
           id: string
           sender_id: string
+          technician_id: string | null
         }
         Insert: {
           body: string
@@ -238,6 +272,7 @@ export type Database = {
           created_at?: string
           id?: string
           sender_id?: string
+          technician_id?: string | null
         }
         Update: {
           body?: string
@@ -245,6 +280,7 @@ export type Database = {
           created_at?: string
           id?: string
           sender_id?: string
+          technician_id?: string | null
         }
         Relationships: [
           {
@@ -257,6 +293,13 @@ export type Database = {
           {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_technician_id_fkey"
+            columns: ["technician_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -503,6 +546,48 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_locations: {
+        Row: {
+          accuracy: number | null
+          booking_id: string
+          latitude: number
+          longitude: number
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          accuracy?: number | null
+          booking_id: string
+          latitude: number
+          longitude: number
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          accuracy?: number | null
+          booking_id?: string
+          latitude?: number
+          longitude?: number
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_locations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_locations_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_profiles: {
         Row: {
           bio: string
@@ -618,6 +703,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      chat_conversations: {
+        Args: never
+        Returns: {
+          appliance: string
+          booking_id: string
+          category: string
+          is_customer: boolean
+          last_at: string
+          last_body: string
+          last_from_me: boolean
+          other_name: string
+          status: Database["public"]["Enums"]["booking_status"]
+          unread: number
+        }[]
+      }
       complete_booking: {
         Args: { booking_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
@@ -666,6 +766,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_chat_read: { Args: { booking_id: string }; Returns: undefined }
       mark_en_route: {
         Args: { booking_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
@@ -726,6 +827,15 @@ export type Database = {
         Returns: undefined
       }
       send_test_notification: { Args: never; Returns: undefined }
+      share_location: {
+        Args: {
+          accuracy?: number
+          booking_id: string
+          latitude: number
+          longitude: number
+        }
+        Returns: undefined
+      }
       submit_review: {
         Args: { booking_id: string; comment?: string; rating: number }
         Returns: Database["public"]["Tables"]["reviews"]["Row"]
