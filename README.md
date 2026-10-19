@@ -72,7 +72,9 @@ change to the app (see "Services" in `supabase/README.md`).
 customer picks one or sends the request to whoever is available, describes the problem, picks a
 visit time (in Manila time) and a saved or new address. Bookings are listed under the Bookings tab,
 and each has its own page with a timeline and a Cancel button. When the technician sends a
-quote, the customer approves or declines it there. A customer's first booking has the welcome offer
+quote, the customer approves or declines it there. Customers can add up to three photos of the problem when they book (or later, until the job is
+done); they're made small on the phone before sending, and technicians see them on the job, even
+before accepting it. A customer's first booking has the welcome offer
 (₱100 to start) taken off what they pay after the visit: Home shows it until they book, and the
 booking form, the booking, the quote and the technician's job all show the amount to pay with it.
 

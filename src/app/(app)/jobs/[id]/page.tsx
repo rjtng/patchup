@@ -2,6 +2,7 @@ import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, UserRound } from "l
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
@@ -13,6 +14,7 @@ import { ReviewItem } from "@/components/reviews/stars";
 import { LocationSharing } from "@/components/tracking/location-sharing";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
+import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
   dueParts,
@@ -24,6 +26,7 @@ import {
   quoteItems,
   UNDER_WAY,
 } from "@/lib/bookings";
+import { withSignedUrls } from "@/lib/documents";
 import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
@@ -56,11 +59,12 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
+    .order("created_at", { referencedTable: "booking_photos" })
     .maybeSingle();
   const me = auth?.claims.sub;
   // Open requests, or this technician's own jobs (the access rules hide the rest).
@@ -80,6 +84,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const assigned = mine && job.status !== "requested";
   const onTheWay = assigned && ["accepted", "en_route", "arrived"].includes(job.status);
   const due = amountDue(job);
+  const photos = await withSignedUrls(supabase, job.booking_photos, PHOTO_BUCKET);
   // The customer's number, while the job is under way (the access rules return it only then).
   const phone =
     assigned && UNDER_WAY.includes(job.status)
@@ -104,6 +109,8 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         {job.brand && <p className="text-sm text-muted">{job.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{job.problem}</p>
       </section>
+
+      <BookingPhotos bookingId={job.id} photos={photos} editable={false} intro="From the customer." />
 
       <section aria-label="Details" className="flex flex-col gap-4 rounded-card bg-white p-5 text-sm shadow-sm">
         <DetailRow icon={CalendarClock} label="Visit">

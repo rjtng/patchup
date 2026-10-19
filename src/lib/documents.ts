@@ -48,13 +48,14 @@ export function formatSize(bytes: number) {
 export const documentPath = (technicianId: string, contentType: string) =>
   `${technicianId}/${crypto.randomUUID()}.${DOCUMENT_TYPES[contentType]}`;
 
-/** Adds a link to each document's file, good for an hour (the bucket is private). */
+/** Adds a link to each document's file (or a booking photo's), good for an hour (the buckets are private). */
 export async function withSignedUrls<T extends { storage_path: string }>(
   supabase: Awaited<ReturnType<typeof createClient>>,
   documents: T[],
+  bucket = DOCUMENT_BUCKET,
 ): Promise<(T & { url: string | null })[]> {
   if (documents.length === 0) return [];
-  const { data } = await supabase.storage.from(DOCUMENT_BUCKET).createSignedUrls(
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(
     documents.map((d) => d.storage_path),
     60 * 60,
   );

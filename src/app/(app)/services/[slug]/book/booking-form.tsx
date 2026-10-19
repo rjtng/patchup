@@ -1,11 +1,12 @@
 "use client";
 
 import type { PostgrestError } from "@supabase/supabase-js";
-import { Home, MapPin } from "lucide-react";
+import { Camera, Home, MapPin, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
+import { addBookingPhotos, MAX_PHOTOS, shrinkPhoto } from "@/lib/booking-photos";
 import { formatPeso, isSlotOpen, TIME_SLOTS, upcomingDays, visitTime } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
@@ -68,6 +69,17 @@ export function BookingForm({
   const chosen = addresses.find((a) => a.id === addressChoice);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [pending, setPending] = useState(false);
+  // Photos of the problem, made small as they're chosen; sent once the booking is made.
+  const [photos, setPhotos] = useState<{ blob: Blob; preview: string }[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const choosePhotos = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])].slice(0, MAX_PHOTOS - photos.length);
+    e.target.value = "";
+    const shrunk = (await Promise.all(files.map(shrinkPhoto))).filter((b): b is Blob => b !== null);
+    setPhotoError(shrunk.length < files.length ? "Some of those couldn't be read as photos. Try a JPG or PNG." : null);
+    setPhotos((list) => [...list, ...shrunk.map((blob) => ({ blob, preview: URL.createObjectURL(blob) }))].slice(0, MAX_PHOTOS));
+  };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -131,7 +143,11 @@ export function BookingForm({
       setPending(false);
       return;
     }
-    router.push(`/bookings/${booking.id}`);
+    const added = photos.length > 0 ? await addBookingPhotos(supabase, booking.id, photos.map((p) => p.blob)) : 0;
+    // This page stays ready in the background: its photos aren't for the next booking.
+    photos.forEach((p) => URL.revokeObjectURL(p.preview));
+    setPhotos([]);
+    router.push(`/bookings/${booking.id}${added < photos.length ? "?photos=failed" : ""}`);
   };
 
   return (
@@ -156,6 +172,49 @@ export function BookingForm({
           maxLength={2000}
           error={errors.problem}
         />
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-semibold text-ink">Photos (optional)</p>
+          <p className="text-sm text-muted">Up to {MAX_PHOTOS}, so the technician sees the problem before coming.</p>
+          <ul className="mt-1.5 grid grid-cols-3 gap-2">
+            {photos.map((photo, i) => (
+              <li key={photo.preview} className="relative aspect-square overflow-hidden rounded-field bg-surface">
+                {/* A photo still on the phone (a local preview), so no image optimizer. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.preview} alt={`Photo ${i + 1}`} className="size-full object-cover" />
+                <button
+                  type="button"
+                  aria-label={`Remove photo ${i + 1}`}
+                  onClick={() => {
+                    URL.revokeObjectURL(photo.preview);
+                    setPhotos((list) => list.filter((p) => p !== photo));
+                  }}
+                  className="absolute right-1 top-1 grid size-8 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
+                >
+                  <X aria-hidden className="size-4" strokeWidth={2.5} />
+                </button>
+              </li>
+            ))}
+            {photos.length < MAX_PHOTOS && (
+              <li>
+                <label className="grid aspect-square cursor-pointer place-items-center rounded-field border-2 border-dashed border-line bg-white text-brand-navy has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-brand-yellow">
+                  <span className="flex flex-col items-center gap-1 text-xs font-semibold">
+                    <Camera aria-hidden className="size-6" />
+                    Add photo
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    aria-label="Add photos"
+                    onChange={choosePhotos}
+                    className="sr-only"
+                  />
+                </label>
+              </li>
+            )}
+          </ul>
+          {photoError && <p className="text-sm text-danger">{photoError}</p>}
+        </div>
       </section>
 
       <fieldset className="flex min-w-0 flex-col gap-3">

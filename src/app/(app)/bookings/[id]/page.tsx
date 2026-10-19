@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
@@ -14,6 +15,7 @@ import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
 import { TripTracker } from "@/components/tracking/trip-tracker";
 import { CardsSkeleton } from "@/components/ui/skeleton";
+import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
   CUSTOMER_CAN_CANCEL,
@@ -26,6 +28,7 @@ import {
   quoteItems,
   UNDER_WAY,
 } from "@/lib/bookings";
+import { withSignedUrls } from "@/lib/documents";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
@@ -35,12 +38,12 @@ import { RateRepair } from "./rate-repair";
 
 export const metadata: Metadata = { title: "Booking" };
 
-export default function BookingPage({ params }: PageProps<"/bookings/[id]">) {
+export default function BookingPage({ params, searchParams }: PageProps<"/bookings/[id]">) {
   return (
     <main className="pb-6">
       <PageHeader title="Booking" backHref="/bookings" />
       <Suspense fallback={<CardsSkeleton count={4} />}>
-        <BookingDetails params={params} />
+        <BookingDetails params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
@@ -52,20 +55,28 @@ const QUOTE_STATUS = {
   declined: { label: "Declined", className: "bg-danger/10 text-danger" },
 };
 
-async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">["params"] }) {
-  const { id } = await params;
+async function BookingDetails({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/bookings/[id]">["params"];
+  searchParams: PageProps<"/bookings/[id]">["searchParams"];
+}) {
+  const [{ id }, { photos: photosParam }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
+    .order("created_at", { referencedTable: "booking_photos" })
     .maybeSingle();
   if (!booking) notFound();
+  const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
 
   const isCustomer = booking.customer_id === auth?.claims.sub;
   // Where the technician is, while they're on the way (see TripTracker).
@@ -99,6 +110,19 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      <BookingPhotos
+        bookingId={booking.id}
+        photos={photos}
+        editable={isCustomer && !isFinished(booking.status)}
+        intro={
+          photosParam === "failed"
+            ? "Some photos didn't upload. Add them again here."
+            : isCustomer && !isFinished(booking.status)
+              ? "Up to 3 photos of the problem, so the technician sees it before coming."
+              : undefined
+        }
+      />
 
       {isCustomer && booking.status === "en_route" && (
         <TripTracker

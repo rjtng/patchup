@@ -30,6 +30,7 @@ supabase/
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
 | `bookings`            | Repair requests and their current status                                      |
+| `booking_photos`      | Customers' photos of the problem on a booking, up to 3 (the files are in Storage) |
 | `first_booking_offer` | The amount taken off a customer's first booking (0 for none)               |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
@@ -172,6 +173,15 @@ other word (case and accents don't matter; % and _ are just characters). Someone
 name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
+
+## Booking photos
+
+Customers add up to three photos of the problem to a booking, when they book or later until the job
+is done or cancelled, and can remove them until then. The files go to the private Storage bucket
+`booking-photos` (JPEG, PNG or WebP up to 5 MB; the app shrinks photos to a JPEG at most 1600 px
+across first), each in a folder named after the booking; `booking_photos` lists each booking's.
+Whoever can see a booking can see its photos: its customer, its technician, technicians who could
+take the open request, and admins. A trigger holds the limit of three.
 
 ## First-booking offer
 
