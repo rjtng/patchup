@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { cn } from "@/lib/cn";
 
-// New requests don't appear on their own yet: this reloads the list.
+// Reloads the screen, for lists that don't update on their own (Jobs, the admin screens).
 export function RefreshButton() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();

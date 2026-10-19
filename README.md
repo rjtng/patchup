@@ -54,6 +54,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/track`                                | Customers' coming visits, with a live map while the technician is on the way |
 | `/chat/[id]`                            | A booking's chat between the customer and the technician |
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
+| `/admin`, `/admin/technicians`, `/admin/bookings` | Admin: overview, approving technicians, assigning and cancelling bookings |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
@@ -105,6 +106,14 @@ Sharing stops, and the location is deleted, once the technician arrives. The map
 OpenStreetMap's tiles, which are meant for light use: before launch, switch `MAP_TILES` in
 `src/lib/tracking.ts` to a tile provider such as MapTiler or Stadia Maps (both have free plans and
 need an API key).
+
+**Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
+Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody
+has taken, those waiting over an hour) and the last 7 days. Under Technicians they see each
+technician's sign-up email, services and jobs, and approve, turn down, suspend or reinstate them
+(the technician is told). Under Bookings they give a request to an approved technician, or cancel
+a booking with a reason that the customer and technician see. An admin who is also a technician
+keeps their Jobs screens.
 
 Every step, and the rules behind them (who may see what, who may take which step and when), is in
 the database, in `supabase/` (see [its README](supabase/README.md)); the app only picks which
@@ -174,4 +183,4 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 2. Sign-in with phone codes (needs an SMS provider).
 3. Switch the map to a tile provider before launch (see "Live tracking" above).
 4. SMS for important notifications (needs an SMS provider such as Semaphore).
-5. An admin dashboard to approve technicians and assign jobs.
+5. Delete the sample accounts and bookings before launch.

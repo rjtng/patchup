@@ -15,6 +15,7 @@ const ACCOUNT_ONLY = [
   "/services",
   "/search",
   "/notifications",
+  "/admin",
   "/reset-password",
 ];
 
