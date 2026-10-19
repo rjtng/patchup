@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { ServiceIcon } from "@/components/services/service-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 import { parseSearch, SEARCH_IDEAS } from "@/lib/search";
-import { serviceCategories } from "@/lib/services";
+import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { SearchBox } from "./search-box";
 
@@ -57,8 +58,9 @@ async function Search({ searchParams }: { searchParams: PageProps<"/search">["se
 
 // Services the search is about, and the approved technicians it finds.
 async function Results({ query }: { query: string }) {
-  const { services: slugs, terms } = parseSearch(query);
-  const services = serviceCategories.filter((c) => slugs.includes(c.slug));
+  const categories = await getServiceCategories();
+  const { services: slugs, terms } = parseSearch(query, categories);
+  const services = categories.filter((c) => slugs.includes(c.slug));
   const supabase = await createClient();
   const { data: technicians, error } =
     slugs.length > 0 || terms.length > 0
@@ -101,14 +103,14 @@ async function Results({ query }: { query: string }) {
             Services
           </h2>
           <ul className="flex flex-col gap-3">
-            {services.map(({ slug, name, icon: Icon }) => (
+            {services.map(({ slug, name, icon }) => (
               <li key={slug}>
                 <Link
                   href={`/services/${slug}`}
                   className="flex items-center gap-4 rounded-card bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-navy/10 text-brand-navy">
-                    <Icon aria-hidden className="size-6" />
+                    <ServiceIcon name={icon} className="size-6" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold text-ink">{name}</span>
@@ -182,7 +184,8 @@ async function Results({ query }: { query: string }) {
 }
 
 // Before anything is typed (or when nothing matches): searches to try, and the services.
-function Ideas() {
+async function Ideas() {
+  const services = await getServiceCategories();
   return (
     <div className="flex flex-col gap-6 px-6 pt-6">
       <section aria-labelledby="ideas" className="flex flex-col gap-3">
@@ -207,19 +210,17 @@ function Ideas() {
           All services
         </h2>
         <ul className="grid grid-cols-4 gap-3">
-          {serviceCategories
-            .filter((c) => c.slug !== "more")
-            .map(({ slug, name, icon: Icon }) => (
-              <li key={slug}>
-                <Link
-                  href={`/services/${slug}`}
-                  className="flex flex-col items-center gap-2 rounded-card bg-white px-1 py-3 text-center text-xs font-semibold text-ink shadow-sm transition-shadow hover:shadow-md"
-                >
-                  <Icon aria-hidden className="size-8 text-brand-navy" strokeWidth={1.75} />
-                  {name}
-                </Link>
-              </li>
-            ))}
+          {services.map(({ slug, name, icon }) => (
+            <li key={slug}>
+              <Link
+                href={`/services/${slug}`}
+                className="flex h-full flex-col items-center gap-2 rounded-card bg-white px-1 py-3 text-center text-xs font-semibold text-ink shadow-sm transition-shadow hover:shadow-md"
+              >
+                <ServiceIcon name={icon} className="size-8 text-brand-navy" strokeWidth={1.75} />
+                {name}
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
     </div>

@@ -47,6 +47,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/forgot-password` → `/forgot-password/verify` → `/reset-password` | Password reset flow      |
 | `/home`, `/chat`, `/track`, `/bookings`, `/profile` | Customers' five tabs, with the bottom nav   |
 | `/jobs`, `/chat`, `/profile`            | Technicians' three tabs (technicians start on Jobs) |
+| `/services`                             | All services (Home's More)                          |
 | `/services/[slug]`                      | Service category: first available or pick a technician |
 | `/services/[slug]/book`                 | Booking form: the problem, visit time, address       |
 | `/bookings/[id]`                        | A booking: status, details, quote to approve, timeline, cancel |
@@ -62,6 +63,10 @@ Production and Preview. They are built into the app, so redeploy after changing 
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
 sent to Log in, and signed-in people skip the sign-in screens; `src/proxy.ts` handles this and keeps
 sessions fresh.
+
+**Services** come from the database: Home shows the first seven and More shows them all, each
+with its icon. Rename, reorder, hide or add one there, with no change to the app (see "Services"
+in `supabase/README.md`).
 
 **Customers can book:** a category page lists the approved technicians who are taking jobs; the
 customer picks one or sends the request to whoever is available, describes the problem, picks a

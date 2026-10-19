@@ -1,7 +1,8 @@
 // Reading a search ("aircon pasig", "tubero", "leaking faucet", "Ben") into
 // the services it's about and the words left to match technicians by (name,
 // city, description). People describe the problem more often than they name
-// the category, in English or Tagalog, so each service has words for it.
+// the category, in English or Tagalog, so each service has words for it; any
+// service is also found by the words of its name (one added in the database too).
 
 const SERVICE_WORDS: Record<string, string[]> = {
   plumbing: [
@@ -58,13 +59,15 @@ export type ParsedSearch = {
   terms: string[];
 };
 
-export function parseSearch(query: string): ParsedSearch {
+/** Reads a search for the services that can be booked. */
+export function parseSearch(query: string, categories: { slug: string; name: string }[]): ParsedSearch {
   const words = wordsOf(query);
   const joined = ` ${words.join(" ")} `;
   const used = new Set<number>();
   const services = new Set<string>();
 
-  for (const [slug, keys] of Object.entries(SERVICE_WORDS)) {
+  for (const { slug, name } of categories) {
+    const keys = [...(SERVICE_WORDS[slug] ?? []), ...wordsOf(name).filter((word) => !FILLER.has(word))];
     for (const key of keys) {
       const keyWords = wordsOf(key);
       if (keyWords.length > 1) {
@@ -85,7 +88,7 @@ export function parseSearch(query: string): ParsedSearch {
   }
 
   return {
-    services: Object.keys(SERVICE_WORDS).filter((slug) => services.has(slug)),
+    services: categories.map((c) => c.slug).filter((slug) => services.has(slug)),
     terms: words.filter((word, i) => !used.has(i) && !FILLER.has(word)),
   };
 }

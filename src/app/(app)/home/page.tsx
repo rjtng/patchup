@@ -1,13 +1,18 @@
-import { Search } from "lucide-react";
+import { Ellipsis, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { serviceCategories } from "@/lib/services";
+import { ServiceIcon } from "@/components/services/service-icon";
+import { getServiceCategories } from "@/lib/services";
 import { Greeting } from "./greeting";
 
 export const metadata: Metadata = { title: "Home" };
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Two rows of four: the first seven services, then More for all of them.
+  const services = (await getServiceCategories()).slice(0, 7);
+
   return (
     <main className="pb-6">
       <header className="bg-brand-gradient-deep rounded-b-[2rem] px-6 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-white">
@@ -46,19 +51,39 @@ export default function HomePage() {
           Services
         </h2>
         <ul className="mt-3 grid grid-cols-4 gap-3">
-          {serviceCategories.map(({ slug, name, icon: Icon }) => (
-            <li key={slug}>
-              <Link
-                href={`/services/${slug}`}
-                className="flex flex-col items-center gap-2 rounded-card bg-white px-1 py-3 text-center text-xs font-semibold text-ink shadow-sm transition-shadow hover:shadow-md"
-              >
-                <Icon aria-hidden className="size-8 text-brand-navy" strokeWidth={1.75} />
-                {name}
-              </Link>
-            </li>
+          {services.map(({ slug, name, icon }) => (
+            <ServiceTile
+              key={slug}
+              href={`/services/${slug}`}
+              icon={<ServiceIcon name={icon} {...TILE_ICON} />}
+              name={name}
+            />
           ))}
+          <ServiceTile
+            href="/services"
+            icon={<Ellipsis aria-hidden {...TILE_ICON} />}
+            name="More"
+            label="More services"
+          />
         </ul>
       </section>
     </main>
+  );
+}
+
+const TILE_ICON = { className: "size-8 text-brand-navy", strokeWidth: 1.75 };
+
+function ServiceTile({ href, icon, name, label }: { href: string; icon: ReactNode; name: string; label?: string }) {
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-label={label}
+        className="flex h-full flex-col items-center gap-2 rounded-card bg-white px-1 py-3 text-center text-xs font-semibold text-ink shadow-sm transition-shadow hover:shadow-md"
+      >
+        {icon}
+        {name}
+      </Link>
+    </li>
   );
 }

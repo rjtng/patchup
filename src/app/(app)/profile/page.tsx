@@ -12,6 +12,7 @@ import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isAdmin } from "@/lib/admin";
 import { withSignedUrls } from "@/lib/documents";
 import { isTechnician } from "@/lib/roles";
+import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { DetailsForm } from "./details-form";
 import { Documents } from "./documents";
@@ -44,7 +45,7 @@ async function ProfileDetails() {
   if (!claims) return null;
   if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, { data: categories }] = await Promise.all([
+  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
     supabase
@@ -57,7 +58,7 @@ async function ProfileDetails() {
       .select("bio, city, years_experience, verification_status, rating_avg, rating_count, technician_services(category_id)")
       .eq("id", claims.sub)
       .maybeSingle(),
-    supabase.from("service_categories").select("id, name").order("sort_order"),
+    getServiceCategories(),
   ]);
   if (!work) {
     return (
@@ -103,8 +104,11 @@ async function ProfileDetails() {
         name={profile?.full_name ?? ""}
         phone={phone?.phone ?? null}
         work={work}
-        services={work.technician_services.map((s) => s.category_id)}
-        categories={categories ?? []}
+        // Only the services that can be booked: one that's hidden stays theirs, for when it's back.
+        services={work.technician_services
+          .map((s) => s.category_id)
+          .filter((id) => categories.some((c) => c.id === id))}
+        categories={categories.map(({ id, name }) => ({ id, name }))}
       />
       {!documentsFirst && documentsSection}
     </>

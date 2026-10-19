@@ -1,27 +1,14 @@
-import { ChevronRight, Star, Wrench, Zap } from "lucide-react";
+import { ChevronRight, Star, Zap } from "lucide-react";
 import Link from "next/link";
-import { EmptyState } from "@/components/ui/empty-state";
 import { formatPeso } from "@/lib/bookings";
+import type { ServiceCategory } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 
 // Who can take a job in this category: any available technician (an open
 // request), or one the customer picks.
-export async function TechnicianChoices({ slug }: { slug: string }) {
+export async function TechnicianChoices({ category }: { category: ServiceCategory }) {
+  const { slug } = category;
   const supabase = await createClient();
-  const { data: category } = await supabase
-    .from("service_categories")
-    .select("id, name, inspection_fee")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!category) {
-    return (
-      <EmptyState icon={Wrench} title="Coming soon">
-        You&apos;ll be able to book this service soon.
-      </EmptyState>
-    );
-  }
-
   const { data: technicians, error } = await supabase
     .from("technician_profiles")
     .select("id, bio, city, years_experience, rating_avg, rating_count, profiles(full_name), technician_services!inner(category_id)")

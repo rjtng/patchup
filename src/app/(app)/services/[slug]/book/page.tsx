@@ -3,22 +3,22 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { getCategory, serviceCategories } from "@/lib/services";
+import { getCategory, serviceParams } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { BookingForm } from "./booking-form";
 
 export function generateStaticParams() {
-  return serviceCategories.map(({ slug }) => ({ slug }));
+  return serviceParams();
 }
 
 export async function generateMetadata({ params }: PageProps<"/services/[slug]/book">): Promise<Metadata> {
   const { slug } = await params;
-  return { title: `Book ${getCategory(slug)?.name.toLowerCase() ?? "a repair"}` };
+  return { title: `Book ${(await getCategory(slug))?.name.toLowerCase() ?? "a repair"}` };
 }
 
 export default async function BookPage({ params, searchParams }: PageProps<"/services/[slug]/book">) {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await getCategory(slug);
   if (!category) notFound();
 
   return (
@@ -43,7 +43,13 @@ async function BookingFormLoader({
 
   const supabase = await createClient();
   const [{ data: category }, { data: addresses }, technician] = await Promise.all([
-    supabase.from("service_categories").select("id, name, inspection_fee").eq("slug", slug).maybeSingle(),
+    // Read fresh here (not from the cached list), so the fee shown is the one charged.
+    supabase
+      .from("service_categories")
+      .select("id, name, inspection_fee")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle(),
     supabase
       .from("addresses")
       .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
