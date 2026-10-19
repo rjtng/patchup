@@ -27,6 +27,7 @@ supabase/
 | `technician_services` | Which service categories each technician works in                            |
 | `service_categories`  | Plumbing, Electrical, … with each one's inspection fee                        |
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
+| `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
 | `bookings`            | Repair requests and their current status                                      |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
@@ -170,6 +171,15 @@ owner, to admins, and to the other side of a booking that's under way: from when
 accepts (or is assigned) until the job is done or cancelled. That's when the job and the booking
 show a Call button.
 
+## Technician documents
+
+Technicians send their government ID, NBI clearance and any certificates from Profile. The files go
+to the private Storage bucket `technician-documents` (photos and PDFs, up to 10 MB), each in a
+folder named after the technician's id; `technician_documents` records what each file is. Storage
+policies let technicians upload only to their own folder, and remove files only until they're
+approved; only they and admins can read the files (the app shows them through links that expire
+after an hour). Admins get a notification for each new document.
+
 ## Set up the hosted project (once)
 
 You need [Node.js](https://nodejs.org) on your computer; the Supabase CLI runs through `npx`.
@@ -196,9 +206,9 @@ You need [Node.js](https://nodejs.org) on your computer; the Supabase CLI runs t
    where id = (select id from auth.users where email = 'you@example.com');
    ```
 
-4. **Approve technicians.** New technicians can't get jobs until they're approved (after you've
-   checked their ID, NBI clearance and certificates). In the app, go to Profile → Admin →
-   Technicians. Their sign-up email is there, to ask for documents.
+4. **Approve technicians.** New technicians can't get jobs until they're approved. In the app, go
+   to Profile → Admin → Technicians: each technician's page shows the ID, NBI clearance and
+   certificates they sent, and their sign-up email if you need to ask for more.
 
 The app shows technicians their own screens (Jobs) based on the account type they chose at
 sign-up, kept in their account details. If you ever change someone between customer and technician

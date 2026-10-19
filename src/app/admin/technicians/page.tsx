@@ -2,9 +2,12 @@ import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CHIP_TONES } from "@/components/bookings/status-chip";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { TECHNICIAN_FILTERS, technicianFilter } from "@/lib/admin";
 import { formatDay } from "@/lib/bookings";
+import { cn } from "@/lib/cn";
+import { hasRequiredDocuments } from "@/lib/documents";
 import { createClient } from "@/lib/supabase/server";
 import { Filters } from "../filters";
 import { VerificationChip } from "../verification-chip";
@@ -33,6 +36,11 @@ async function TechnicianList({ searchParams }: { searchParams: PageProps<"/admi
   const status = technicianFilter((await searchParams).status);
   const supabase = await createClient();
   const { data: technicians, error } = await supabase.rpc("admin_technicians", status === "all" ? {} : { status });
+  // Which documents each has sent, to see who's ready to be checked.
+  const { data: documents } = technicians?.length
+    ? await supabase.from("technician_documents").select("technician_id, kind").in("technician_id", technicians.map((t) => t.id))
+    : { data: [] };
+  const sentBy = (id: string) => (documents ?? []).filter((d) => d.technician_id === id).map((d) => d.kind);
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -68,6 +76,16 @@ async function TechnicianList({ searchParams }: { searchParams: PageProps<"/admi
                   </span>
                   <span className="mt-2 flex flex-wrap gap-2">
                     <VerificationChip status={t.verification_status} />
+                    {t.verification_status === "pending" && (
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
+                          hasRequiredDocuments(sentBy(t.id)) ? CHIP_TONES.active : CHIP_TONES.cancelled,
+                        )}
+                      >
+                        {hasRequiredDocuments(sentBy(t.id)) ? "Documents in" : "Documents missing"}
+                      </span>
+                    )}
                     {t.verification_status === "approved" && (
                       <span className="inline-flex rounded-full bg-surface px-3 py-1 text-xs font-semibold text-ink">
                         {t.is_available ? "Taking jobs" : "Not taking jobs"}

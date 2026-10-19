@@ -92,8 +92,11 @@ async function JobBoard() {
       <LiveUpdates topics={topics} />
       {profile.verification_status === "pending" && (
         <Notice icon={Clock} title="We're checking your account">
-          You&apos;ll start getting requests once PatchUp approves it. Meanwhile, set up your{" "}
-          <Link href="/profile" className="font-semibold text-brand-navy underline">work profile</Link>.
+          You&apos;ll start getting requests once PatchUp approves it. Meanwhile,{" "}
+          <Link href="/profile#documents" className="font-semibold text-brand-navy underline">
+            send your ID and NBI clearance
+          </Link>{" "}
+          and set up your <Link href="/profile" className="font-semibold text-brand-navy underline">work profile</Link>.
         </Notice>
       )}
       {(profile.verification_status === "rejected" || profile.verification_status === "suspended") && (
