@@ -38,13 +38,29 @@ export function formatAgo(ms: number) {
 // A position older than this probably means the phone lost signal or closed PatchUp.
 export const STALE_AFTER_MS = 2 * 60 * 1000;
 
-// Map tiles from OpenStreetMap. Their policy is meant for light use: before
-// PatchUp grows, switch to a tile provider (see README, "Live tracking").
-export const MAP_TILES = {
-  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 19,
-};
+// The map's tiles: MapTiler's streets map, with the API key from
+// NEXT_PUBLIC_MAPTILER_KEY (see README, "Live tracking"). `{r}` asks for
+// sharper "@2x" tiles on high-resolution screens. MapTiler requires its
+// credit on every plan, and its logo on the free plan.
+// Without a key (local development, tests) the map falls back to
+// OpenStreetMap's own tiles, which are only meant for light use.
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+
+export const MAP_TILES = MAPTILER_KEY
+  ? {
+      url: `https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(MAPTILER_KEY)}`,
+      attribution:
+        '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> ' +
+        '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
+      maxZoom: 20,
+      logo: { href: "https://www.maptiler.com/", src: "https://api.maptiler.com/resources/logo.svg", alt: "MapTiler" },
+    }
+  : {
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      logo: null,
+    };
 
 /** Why the phone couldn't give its location, for people. */
 export function locationErrorMessage(error: GeolocationPositionError) {
