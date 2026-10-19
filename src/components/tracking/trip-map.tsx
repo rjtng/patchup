@@ -55,6 +55,22 @@ export function TripMap({
       const m = L.map(box.current, { zoomControl: false, attributionControl: true, scrollWheelZoom: false });
       L.control.zoom({ position: "topright" }).addTo(m);
       L.tileLayer(MAP_TILES.url, { attribution: MAP_TILES.attribution, maxZoom: MAP_TILES.maxZoom }).addTo(m);
+      const { logo } = MAP_TILES;
+      if (logo) {
+        // The tile provider's logo, bottom left (its terms ask for it), above
+        // the credits line, which spans the whole map on a phone.
+        const control = new L.Control({ position: "bottomleft" });
+        control.onAdd = () => {
+          const link = L.DomUtil.create("a");
+          link.href = logo.href;
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.style.marginBottom = "24px";
+          link.innerHTML = `<img src="${logo.src}" alt="${logo.alt}" style="display:block;height:20px;width:auto">`;
+          return link;
+        };
+        control.addTo(m);
+      }
       m.setView([14.5995, 120.9842], 12); // Manila, until there's something to show
       map.current = { L, map: m };
       box.current.dispatchEvent(new Event("patchup:map-ready"));

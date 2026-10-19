@@ -103,9 +103,11 @@ few seconds while the job screen is open (it keeps the screen on). The customer 
 map on the Track tab and on the booking, with the distance and a rough arrival time if their
 address has a map pin (customers can pin an address with their phone's location when booking).
 Sharing stops, and the location is deleted, once the technician arrives. The map uses Leaflet with
-OpenStreetMap's tiles, which are meant for light use: before launch, switch `MAP_TILES` in
-`src/lib/tracking.ts` to a tile provider such as MapTiler or Stadia Maps (both have free plans and
-need an API key).
+[MapTiler](https://www.maptiler.com/)'s streets map: set `NEXT_PUBLIC_MAPTILER_KEY` in Vercel to a
+MapTiler API key (in MapTiler, limit the key to PatchUp's web addresses). Without the key the map
+falls back to OpenStreetMap's own tiles, which are only meant for light use. MapTiler's free plan
+is for non-commercial use and requires its logo on the map (shown, bottom left); once PatchUp has
+real customers, move to a paid plan (Flex). See `MAP_TILES` in `src/lib/tracking.ts`.
 
 **Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
 Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody
@@ -181,6 +183,7 @@ The font is Montserrat, bundled with the app through `@fontsource-variable/monts
 1. Finish the Supabase Auth settings: redirect URLs, your own email sending, then the email
    templates (see "Sign-in settings" in `supabase/README.md`).
 2. Sign-in with phone codes (needs an SMS provider).
-3. Switch the map to a tile provider before launch (see "Live tracking" above).
+3. Move MapTiler to a paid plan before launch: its free plan is non-commercial (see "Live
+   tracking" above).
 4. SMS for important notifications (needs an SMS provider such as Semaphore).
 5. Delete the sample accounts and bookings before launch.
