@@ -22,7 +22,7 @@ supabase/
 
 | Table                 | What it holds                                                                 |
 | --------------------- | ----------------------------------------------------------------------------- |
-| `profiles`            | Everyone with an account: name and role (customer, technician or admin)      |
+| `profiles`            | Everyone with an account: name, role (customer, technician or admin) and profile photo |
 | `technician_profiles` | Technician details: bio, city, availability, approval status, rating         |
 | `technician_services` | Which service categories each technician works in                            |
 | `service_categories`  | The services (Plumbing, Electrical, …): name, icon, order, inspection fee, shown or hidden |
@@ -234,6 +234,21 @@ other word (case and accents don't matter; % and _ are just characters). Someone
 name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
+
+## Profile photos and Top technicians
+
+Anyone can add a profile photo: the app uploads a small square JPEG to the private Storage bucket
+`avatars` (JPEG, PNG or WebP up to 2 MB), in a folder named after them, and puts its path in
+`profiles.avatar_url` (which can only point into their own folder). Someone's current photo is seen
+by whoever can see their profile (the profiles access rules: an approved technician's by everyone, a
+customer's by themselves, the technicians of their bookings and admins); their other files only by
+themselves. People add and remove files in their own folder only, and deleting an account removes
+them with their other files (`private.account_files`).
+
+`top_technicians(near_city, max_results)` lists approved technicians taking jobs in a shown service
+for Home: those in `near_city` first (case and spaces don't matter), then by rating weighted so a few
+reviews count for less (as if each had three more 4-star reviews), then by how many reviews. Like
+search, it runs with the caller's own access.
 
 ## Booking photos
 

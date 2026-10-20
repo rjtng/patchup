@@ -1,6 +1,8 @@
 import { ChevronRight, Star, Zap } from "lucide-react";
 import Link from "next/link";
+import { Avatar } from "@/components/people/avatar";
 import { formatPeso } from "@/lib/bookings";
+import { profilePhotos } from "@/lib/profile-photos";
 import type { ServiceCategory } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,6 +18,7 @@ export async function TechnicianChoices({ category }: { category: ServiceCategor
     .eq("verification_status", "approved")
     .eq("is_available", true)
     .order("rating_avg", { ascending: false });
+  const photos = await profilePhotos(supabase, (technicians ?? []).map((t) => t.id));
 
   const service = category.name.toLowerCase();
 
@@ -59,12 +62,7 @@ export async function TechnicianChoices({ category }: { category: ServiceCategor
             return (
               <li key={t.id} className="overflow-hidden rounded-card bg-white shadow-sm transition-shadow hover:shadow-md">
                 <Link href={`/services/${slug}/book?technician=${t.id}`} className="flex gap-4 p-4">
-                  <span
-                    aria-hidden
-                    className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-navy/10 text-lg font-bold text-brand-navy"
-                  >
-                    {name.charAt(0)}
-                  </span>
+                  <Avatar name={name} photo={photos.get(t.id)} />
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold text-ink">{name}</span>
                     <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-muted">

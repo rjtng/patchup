@@ -7,6 +7,8 @@ import { ServiceIcon } from "@/components/services/service-icon";
 import { getServiceCategories } from "@/lib/services";
 import { FirstBookingOffer } from "./first-booking-offer";
 import { Greeting } from "./greeting";
+import { MyPhoto, MyPhotoPlaceholder } from "./my-photo";
+import { TopTechnicians } from "./top-technicians";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -17,8 +19,11 @@ export default async function HomePage() {
   return (
     <main className="pb-6">
       <header className="bg-brand-gradient-deep rounded-b-[2rem] px-6 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-white">
-        <div className="flex min-h-12 items-center justify-between gap-3">
-          <div>
+        <div className="flex min-h-12 items-center gap-3">
+          <Suspense fallback={<MyPhotoPlaceholder />}>
+            <MyPhoto />
+          </Suspense>
+          <div className="min-w-0 flex-1">
             <p className="text-sm text-white/90">
               <Greeting />
             </p>
@@ -65,6 +70,10 @@ export default async function HomePage() {
           />
         </ul>
       </section>
+
+      <Suspense>
+        <TopTechnicians />
+      </Suspense>
     </main>
   );
 }

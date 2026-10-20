@@ -34,7 +34,8 @@ export default function PrivacyPage() {
           <ul>
             <li>
               <strong>Everyone:</strong> your name, email address and password (stored scrambled, so nobody can read
-              it), whether you&apos;re a customer or a technician, and your mobile number if you add it.
+              it), whether you&apos;re a customer or a technician, and your mobile number and profile photo if you add
+              them.
             </li>
             <li>
               <strong>Customers:</strong> your saved addresses and map pins; what you book (the service, the item, its
@@ -83,13 +84,13 @@ export default function PrivacyPage() {
             <li>
               <strong>The other side of your booking.</strong> Before taking a request, technicians who could take it
               see the service, the item, the problem, any photos and the area (barangay and city), but not your street
-              address. The technician who takes it sees your name, address and map pin. While the job is under way you
-              can call each other if you&apos;ve added your number, and the customer can follow the technician on a map
-              while they&apos;re on the way.
+              address. The technician who takes it sees your name, photo, address and map pin. While the job is under
+              way you can call each other if you&apos;ve added your number, and the customer can follow the technician
+              on a map while they&apos;re on the way.
             </li>
             <li>
-              <strong>Everyone:</strong> an approved technician&apos;s profile (name, city, experience, description,
-              services, rating, and reviews with the reviewer&apos;s first name).
+              <strong>Everyone:</strong> an approved technician&apos;s profile (photo, name, city, experience,
+              description, services, rating, and reviews with the reviewer&apos;s first name).
             </li>
             <li>
               <strong>PatchUp&apos;s admins:</strong> what they need to run PatchUp, including technicians&apos;
@@ -113,9 +114,9 @@ export default function PrivacyPage() {
           </p>
           <p>
             When you delete your account (Profile, then Delete my account), we delete your name, email, password, mobile
-            number, saved addresses, photos, documents, the messages you sent and your notifications. We keep finished
-            and cancelled bookings, quotes, payments and star ratings, without anything that identifies you, for our
-            records and for the other side&apos;s history.
+            number, saved addresses, profile photo and other photos, documents, the messages you sent and your
+            notifications. We keep finished and cancelled bookings, quotes, payments and star ratings, without anything
+            that identifies you, for our records and for the other side&apos;s history.
           </p>
         </LegalSection>
 

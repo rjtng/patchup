@@ -8,6 +8,7 @@ import { ReceiptLink } from "@/components/bookings/receipt-link";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingPhotos } from "@/components/bookings/booking-photos";
+import { CancelBooking } from "@/components/bookings/cancel-booking";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
@@ -34,7 +35,6 @@ import { withSignedUrls } from "@/lib/documents";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
-import { CancelBooking } from "./cancel-booking";
 import { QuoteResponse } from "./quote-response";
 import { RateRepair } from "./rate-repair";
 

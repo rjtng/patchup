@@ -3,10 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { Avatar } from "@/components/people/avatar";
 import { ServiceIcon } from "@/components/services/service-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
+import { profilePhotos } from "@/lib/profile-photos";
 import { parseSearch, SEARCH_IDEAS } from "@/lib/search";
 import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
@@ -66,6 +68,7 @@ async function Results({ query }: { query: string }) {
     slugs.length > 0 || terms.length > 0
       ? await supabase.rpc("search_technicians", { terms, service_slugs: slugs, max_results: 30 })
       : { data: [], error: null };
+  const photos = await profilePhotos(supabase, (technicians ?? []).map((t) => t.id));
   const back = encodeURIComponent(`/search?q=${encodeURIComponent(query)}`);
 
   if (error) {
@@ -142,12 +145,7 @@ async function Results({ query }: { query: string }) {
                     href={`/technicians/${t.id}?back=${back}`}
                     className="flex gap-4 rounded-card bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                   >
-                    <span
-                      aria-hidden
-                      className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-navy/10 text-lg font-bold text-brand-navy"
-                    >
-                      {name.charAt(0)}
-                    </span>
+                    <Avatar name={name} photo={photos.get(t.id)} />
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold text-ink">{name}</span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-muted">

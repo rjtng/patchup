@@ -1152,6 +1152,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      top_technicians: {
+        Args: { max_results?: number; near_city?: string }
+        Returns: {
+          city: string
+          full_name: string
+          id: string
+          rating_avg: number
+          rating_count: number
+          services: string[]
+        }[]
+      }
     }
     Enums: {
       document_kind: "government_id" | "nbi_clearance" | "certificate"
