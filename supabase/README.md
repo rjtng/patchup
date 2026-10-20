@@ -158,7 +158,8 @@ through `set_technician_verification`, `assign_technician` and `cancel_booking`.
 add three functions, each of which refuses anyone who isn't an admin:
 
 - `admin_overview()`: the dashboard's counts, as JSON (technicians waiting for approval, requests
-  nobody has taken and those waiting too long, jobs in progress, the last 7 days).
+  nobody has taken and those waiting too long, jobs in progress and those running late, the last 7
+  days).
 - `admin_technicians(status, technician_id)`: technicians with their sign-up email, services and
   jobs done (both arguments optional).
 - `admin_emails(user_ids)`: people's sign-up email, to contact them.
@@ -166,6 +167,8 @@ add three functions, each of which refuses anyone who isn't an admin:
 Technicians are told when they're approved, turned down or suspended (a trigger on
 `verification_status`, so this also happens when it's changed by hand). When an admin cancels a
 booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
+`assign_technician` also gives a job to another technician until its technician sets off; the one
+who had it hears that PatchUp gave it to someone else.
 
 ## Requests nobody takes
 
@@ -186,6 +189,26 @@ requests waiting too long by the same rule (`private.follow_up_at`). To change t
 `private.follow_up_at` in a new migration (and `followUpAt` in `src/lib/admin.ts`). The job's runs
 are in `cron.job_run_details`; `select cron.unschedule('follow-up-requests')` stops it. A database
 without pg_cron (like the plain Postgres the tests can run on) doesn't follow up on its own.
+
+## Visit reminders and late technicians
+
+Every 5 minutes a second pg_cron job, `follow-up-visits`, runs `private.follow_up_visits()` for jobs
+a technician has taken but not set off for:
+
+- **The evening before:** at 6 PM (Manila) the day before the visit, the customer is reminded who's
+  coming, when and where (unless they booked after that).
+- **An hour before:** the technician is reminded, with the address (unless they took the job within
+  that hour).
+- **The visit time:** a technician who hasn't tapped "I'm on my way" is nudged to, or to give the job
+  back.
+- **30 minutes late:** still not on the way (counting from the visit time, or from when the
+  technician took the job if that was later): admins are notified so they can call them or give the
+  job to someone else, and the customer hears that the PatchUp team is checking. This is a booking
+  step (`late`) on the timeline, once for each technician who takes the job; the admin dashboard
+  counts these jobs by the same rule (`private.late_at`, and `lateAt` in `src/lib/admin.ts`).
+
+The reminders aren't booking steps; `private.booking_reminders` records the ones sent, so each goes
+once (to each technician, for theirs). `select cron.unschedule('follow-up-visits')` stops the job.
 
 ## Search
 

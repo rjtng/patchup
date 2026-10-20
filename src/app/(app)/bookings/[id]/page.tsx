@@ -103,6 +103,9 @@ async function BookingDetails({
   const waitingSteps = booking.booking_events.filter((e) => ["created", "declined", "overdue"].includes(e.event));
   const teamHelping = booking.status === "requested" && waitingSteps.at(-1)?.event === "overdue";
   const expired = booking.booking_events.some((e) => e.event === "expired");
+  // The follow-up on technicians who don't set off: it told admins this technician is late.
+  const takenSteps = booking.booking_events.filter((e) => ["accepted", "assigned", "late"].includes(e.event));
+  const runningLate = booking.status === "accepted" && takenSteps.at(-1)?.event === "late";
   // Booking again: whether the first-booking offer still applies (cancelled bookings don't use it up).
   const offer =
     isCustomer && booking.status === "cancelled" ? ((await supabase.rpc("first_booking_discount")).data ?? 0) : 0;
@@ -210,12 +213,17 @@ async function BookingDetails({
         </DetailRow>
         <DetailRow icon={UserRound} label="Technician">
           {booking.technician_id ? (
-            <Link
-              href={`/technicians/${booking.technician_id}?back=/bookings/${booking.id}`}
-              className="font-semibold text-brand-navy underline"
-            >
-              {technicianName ?? "Your technician"}
-            </Link>
+            <>
+              <Link
+                href={`/technicians/${booking.technician_id}?back=/bookings/${booking.id}`}
+                className="font-semibold text-brand-navy underline"
+              >
+                {technicianName ?? "Your technician"}
+              </Link>
+              {runningLate && (
+                <span className="block text-muted">Running late; the PatchUp team is checking with them.</span>
+              )}
+            </>
           ) : booking.status === "cancelled" ? (
             "None"
           ) : (

@@ -75,6 +75,9 @@ export const EVENT_LABELS: Record<string, string> = {
   // From the follow-up on requests nobody takes (see the unanswered requests migration).
   overdue: "Taking longer than usual; the PatchUp team is helping",
   expired: "Cancelled: no technician was free",
+  // From the follow-up on technicians who don't set off (see the visit reminders migration).
+  late: "Technician running late; the PatchUp team is checking",
+  unassigned: "PatchUp gave the job to another technician",
 };
 
 // From accepted until done: while a job is under way, its customer and

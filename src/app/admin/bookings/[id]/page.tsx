@@ -11,7 +11,7 @@ import { LiveUpdates } from "@/components/live-updates";
 import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { BOOKING_FILTERS } from "@/lib/admin";
+import { BOOKING_FILTERS, lateAt, takenAt } from "@/lib/admin";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import { amountDue, dueParts, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
 import { withSignedUrls } from "@/lib/documents";
@@ -50,7 +50,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment), booking_photos(id, storage_path, created_at)",
+      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -72,8 +72,8 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const [{ data: emails }, { data: phones }, { data: technicians }] = await Promise.all([
     supabase.rpc("admin_emails", { user_ids: people }),
     supabase.from("phone_numbers").select("user_id, phone").in("user_id", people),
-    // Who could do it: approved technicians in this service.
-    booking.status === "requested"
+    // Who could do it: approved technicians in this service (also for a job whose technician hasn't set off).
+    booking.status === "requested" || booking.status === "accepted"
       ? supabase
           .from("technician_profiles")
           .select("id, city, is_available, rating_avg, rating_count, profiles(full_name), technician_services!inner(category_id)")
@@ -88,6 +88,11 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
   const customerName = booking.customer?.full_name || "The customer";
   const technicianName = booking.technician?.full_name || null;
+  // A technician who hasn't set off by now: read once per request, after the data above.
+  const late =
+    booking.status === "accepted" &&
+    // eslint-disable-next-line react-hooks/purity
+    Date.now() >= lateAt(Date.parse(booking.scheduled_at), takenAt(booking));
 
   return (
     <div className="flex flex-col gap-4 px-6">
@@ -106,11 +111,20 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
 
       <BookingPhotos bookingId={booking.id} photos={photos} editable={false} intro="From the customer." />
 
-      {booking.status === "requested" && technicians && (
+      {(booking.status === "requested" || booking.status === "accepted") && technicians && (
         <AssignTechnician
           bookingId={booking.id}
           category={booking.service_categories?.name ?? "this service"}
-          askedFor={booking.technician_id}
+          askedFor={booking.status === "requested" ? booking.technician_id : null}
+          current={
+            booking.status === "accepted" && booking.technician_id
+              ? {
+                  id: booking.technician_id,
+                  name: technicianName ?? "The technician",
+                  late,
+                }
+              : null
+          }
           technicians={technicians
             .map((t) => ({
               id: t.id,

@@ -85,6 +85,12 @@ technicians who could take it are reminded, and a request for a technician who h
 opens to the others. If nobody has it by the visit time, it's cancelled and the customer is told;
 "Book again" on the booking fills in the form from it, and the first-booking offer still applies.
 
+**Reminders and late technicians:** the customer is reminded at 6 PM the evening before the visit
+(who's coming, when and where), and the technician an hour before, with the address. At the visit
+time a technician who hasn't tapped "I'm on my way" is nudged; 30 minutes later, admins are
+notified so they can call them or give the job to someone else, and the customer hears that the
+PatchUp team is checking.
+
 **Search:** Home's search box opens Search, where results follow as you type. A search can name a
 service or describe the problem, in English or Tagalog ("aircon", "leaking faucet", "tubero",
 "electrician"), and finds that service; the other words (a name, a city) find approved technicians
@@ -142,11 +148,12 @@ tab also has phone notifications and Log out.
 
 **Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
 Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody
-has taken, those waiting too long) and the last 7 days. Under Technicians they see who has
+has taken, those waiting too long, jobs running late) and the last 7 days. Under Technicians they see who has
 sent their documents, and for each technician the documents themselves (photos shown, PDFs
 linked), their sign-up email, services and jobs; then they approve, turn down, suspend or
-reinstate them (the technician is told). Admins are notified when a technician sends a document. Under Bookings they give a request to an approved technician, or cancel
-a booking with a reason that the customer and technician see. Under Services they add services and
+reinstate them (the technician is told). Admins are notified when a technician sends a document. Under Bookings they give a request to an approved technician (or a job
+to another one, until its technician sets off), or cancel a booking with a reason that the customer
+and technician see. Under Services they add services and
 change their name, inspection fee, icon and order, or hide one; customers see each change right
 away. An admin who is also a technician keeps their Jobs screens.
 
