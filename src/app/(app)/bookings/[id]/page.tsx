@@ -31,9 +31,13 @@ import {
   formatSchedule,
   fullAddress,
   isFinished,
+  LAST_MINUTE_MS,
+  MAX_MOVES,
   quoteItems,
+  takenAt,
   UNDER_WAY,
 } from "@/lib/bookings";
+import { firstName } from "@/lib/chat";
 import { withSignedUrls } from "@/lib/documents";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
@@ -73,7 +77,7 @@ async function BookingDetails({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
+      "id, status, customer_id, technician_id, created_at, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, actor_id, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -121,6 +125,24 @@ async function BookingDetails({
       ? ((await supabase.rpc("busy_times", { technician: booking.technician_id, except_booking: booking.id })).data ??
         [])
       : [];
+  // Cancelling a visit a technician has: their last-minute cancellations so far, for the warning.
+  const cancellable = isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status);
+  const taken = booking.technician_id !== null && (booking.status === "accepted" || booking.status === "en_route");
+  const record = cancellable && taken ? (await supabase.rpc("last_minute_record").single()).data : null;
+  const who = technicianName ? firstName(technicianName) : "your technician";
+  // Read once per request, after the data above, so the times offered (and the limits) start from now.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  // Once a technician has it (or was asked for), it moves at most twice, until 2 hours before.
+  const moves = booking.booking_events.filter((e) => e.event === "rescheduled" && e.actor_id === booking.customer_id);
+  const limited = booking.technician_id !== null;
+  const moveBlocked = !limited
+    ? null
+    : Date.parse(booking.scheduled_at) - now < LAST_MINUTE_MS
+      ? `The visit is less than 2 hours away, so its time can't change now. Message ${who} if something's come up.`
+      : moves.length >= MAX_MOVES
+        ? "You've changed the time twice, so it can't change again. If this time doesn't work, cancel and book again."
+        : null;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -283,9 +305,9 @@ async function BookingDetails({
           current={booking.scheduled_at}
           technicianName={technicianName}
           busy={busy}
-          // Read once per request, after the data above, so the times offered start from now.
-          // eslint-disable-next-line react-hooks/purity
-          now={Date.now()}
+          now={now}
+          movesLeft={limited ? MAX_MOVES - moves.length : undefined}
+          blocked={moveBlocked}
         />
       )}
 
@@ -304,7 +326,22 @@ async function BookingDetails({
 
       {isCustomer && <ReportProblem bookingId={booking.id} technician={false} reports={booking.reports} />}
 
-      {isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status) && <CancelBooking bookingId={booking.id} />}
+      {cancellable && (
+        <CancelBooking
+          bookingId={booking.id}
+          check={
+            taken
+              ? {
+                  status: booking.status,
+                  scheduledAt: booking.scheduled_at,
+                  takenAt: takenAt(booking),
+                  who,
+                  cancellations: record?.cancellations ?? 0,
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

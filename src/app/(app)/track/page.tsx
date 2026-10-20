@@ -8,7 +8,7 @@ import { Avatar } from "@/components/people/avatar";
 import { TripTracker } from "@/components/tracking/trip-tracker";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { formatSchedule } from "@/lib/bookings";
+import { formatSchedule, takenAt } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { profilePhotos } from "@/lib/profile-photos";
 import { createClient } from "@/lib/supabase/server";
@@ -38,7 +38,7 @@ async function Visits() {
   const { data: visits, error } = await supabase
     .from("bookings")
     .select(
-      "id, status, technician_id, appliance, scheduled_at, street, barangay, city, latitude, longitude, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name)",
+      "id, status, technician_id, created_at, appliance, scheduled_at, street, barangay, city, latitude, longitude, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(event, created_at)",
     )
     .eq("customer_id", me)
     .in("status", ["accepted", "en_route"])
@@ -47,7 +47,7 @@ async function Visits() {
   // Where the technicians on the way are (see TripTracker).
   const onTheWay = (visits ?? []).filter((v) => v.status === "en_route").map((v) => v.id);
   const technicians = [...new Set((visits ?? []).flatMap((v) => (v.technician_id ? [v.technician_id] : [])))];
-  const [{ data: locations }, { data: ratings }, { data: phones }, photos] = await Promise.all([
+  const [{ data: locations }, { data: ratings }, { data: phones }, photos, { data: record }] = await Promise.all([
     onTheWay.length
       ? supabase
           .from("technician_locations")
@@ -58,6 +58,8 @@ async function Visits() {
     // Their numbers, while the job is under way (the access rules return them only then).
     supabase.from("phone_numbers").select("user_id, phone").in("user_id", technicians),
     profilePhotos(supabase, technicians),
+    // For the warning when cancelling at the last minute.
+    supabase.rpc("last_minute_record").single(),
   ]);
 
   if (error) {
@@ -129,6 +131,13 @@ async function Visits() {
                 bookingId={v.id}
                 who={who}
                 phone={phones?.find((p) => p.user_id === v.technician_id)?.phone ?? null}
+                check={{
+                  status: v.status,
+                  scheduledAt: v.scheduled_at,
+                  takenAt: takenAt(v),
+                  who,
+                  cancellations: record?.cancellations ?? 0,
+                }}
               />
               <div className="border-t border-line pt-4 text-sm">
                 {enRoute ? (

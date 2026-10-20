@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { BookingPausedNotice, myBookingPause } from "@/components/bookings/booking-paused";
 import { PageHeader } from "@/components/layout/page-header";
 import { mySuspension, SuspendedNotice } from "@/components/reports/suspended-notice";
 import { CardsSkeleton } from "@/components/ui/skeleton";
@@ -53,6 +54,7 @@ async function BookingFormLoader({
     { data: previous },
     { data: busy },
     suspension,
+    pausedUntil,
   ] = await Promise.all([
     // Read fresh here (not from the cached list), so the fee shown is the one charged.
     supabase
@@ -79,15 +81,20 @@ async function BookingFormLoader({
       : Promise.resolve({ data: null }),
     // When the technician asked for is taken (booking holds to it too).
     technicianId ? supabase.rpc("busy_times", { technician: technicianId }) : Promise.resolve({ data: [] }),
-    // A suspended customer can't book (create_booking refuses them too).
+    // A suspended customer can't book, nor one paused after last-minute cancellations (create_booking refuses them too).
     mySuspension(supabase),
+    myBookingPause(supabase),
   ]);
   if (!category) notFound();
-  if (suspension) {
+  if (suspension || pausedUntil) {
     return (
       <>
         <PageHeader title={`Book ${category.name.toLowerCase()}`} backHref={`/services/${slug}`} />
-        <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />
+        {suspension ? (
+          <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />
+        ) : (
+          pausedUntil && <BookingPausedNotice until={pausedUntil} className="mx-6 mt-6" />
+        )}
       </>
     );
   }

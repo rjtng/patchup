@@ -27,6 +27,7 @@ import {
   fullAddress,
   mapsLink,
   quoteItems,
+  takenAt,
   UNDER_WAY,
 } from "@/lib/bookings";
 import { withSignedUrls } from "@/lib/documents";
@@ -62,7 +63,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
+      "id, status, customer_id, technician_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -244,6 +245,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         discount={job.discount}
         amountDue={due.total}
         clash={clash && `${clash.appliance}, ${formatSchedule(clash.scheduled_at)}`}
+        lastMinute={{ status: job.status, scheduledAt: job.scheduled_at, takenAt: takenAt(job) }}
       />
 
       <BookingTimeline events={job.booking_events} />

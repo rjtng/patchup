@@ -15,14 +15,14 @@ export const radioChip = (selected: boolean) =>
 
 export type VisitChoice = { day: string; slot: string | null };
 
-/** Whether a slot can be picked: far enough ahead, and the technician (if any) isn't taken then. */
-export const slotFree = (day: string, slot: string, now: number, busy: number[]) =>
-  isSlotOpen(day, slot, now) && !clashes(Date.parse(visitTime(day, slot)), busy);
+/** Whether a slot can be picked: far enough ahead (see isSlotOpen), and the technician (if any) isn't taken then. */
+export const slotFree = (day: string, slot: string, now: number, busy: number[], lead?: number) =>
+  isSlotOpen(day, slot, now, lead) && !clashes(Date.parse(visitTime(day, slot)), busy);
 
 /** The first day with a time that can be picked. */
-export const firstFreeDay = (now: number, busy: number[]) => {
+export const firstFreeDay = (now: number, busy: number[], lead?: number) => {
   const days = upcomingDays(now);
-  return (days.find((d) => TIME_SLOTS.some((s) => slotFree(d.value, s.value, now, busy))) ?? days[0]).value;
+  return (days.find((d) => TIME_SLOTS.some((s) => slotFree(d.value, s.value, now, busy, lead))) ?? days[0]).value;
 };
 
 /**
@@ -37,6 +37,7 @@ export function VisitTimePicker({
   now,
   busy = [],
   current,
+  lead,
   error,
   inset = "page",
 }: {
@@ -47,6 +48,8 @@ export function VisitTimePicker({
   busy?: number[];
   /** Moving a visit: its time now (ISO). */
   current?: string;
+  /** How far ahead a time must be, if more than the usual hour (ms). */
+  lead?: number;
   error?: string;
   /** What it sits in, so the scrolling row of days runs to its edges: the page, or a card. */
   inset?: "page" | "card";
@@ -54,7 +57,7 @@ export function VisitTimePicker({
   const days = upcomingDays(now);
   const isCurrent = (day: string, slot: string) =>
     current !== undefined && Date.parse(visitTime(day, slot)) === Date.parse(current);
-  const free = (day: string, slot: string) => slotFree(day, slot, now, busy) && !isCurrent(day, slot);
+  const free = (day: string, slot: string) => slotFree(day, slot, now, busy, lead) && !isCurrent(day, slot);
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-3">
@@ -84,7 +87,7 @@ export function VisitTimePicker({
       <div className="grid grid-cols-3 gap-2">
         {TIME_SLOTS.map((s) => {
           // Too soon is plain (greyed out); taken and the time it is now say so.
-          const note = !isSlotOpen(value.day, s.value, now)
+          const note = !isSlotOpen(value.day, s.value, now, lead)
             ? null
             : isCurrent(value.day, s.value)
               ? "Now"

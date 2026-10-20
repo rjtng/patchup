@@ -264,6 +264,18 @@ technician sets off: the timeline notes the old time, the technician (if any) is
 told when an admin moved it, the reminders go again for the new time, and "running late" counts from
 the move.
 
+Last minute (`private.is_last_minute`): a technician has the job, and it's less than 2 hours to the
+visit or they're on the way; not in the first 10 minutes after they took it or its time last changed.
+
+- Once a technician has a visit (or was asked for), its customer moves it at most twice, while it's
+  at least 2 hours away, to a time at least 2 hours away. Admins aren't limited.
+- `cancel_booking` marks a customer's last-minute cancellation (`booking_events.last_minute`), unless the
+  visit time has passed. With 3 in 30 days, `create_booking` refuses them until the first of those
+  is 30 days old (`private.booking_paused_until`), and they're told when it pauses.
+- `decline_booking` marks a technician's last-minute give-back, and admins are told at once.
+- `last_minute_record(person)` gives someone's last-minute cancellations and give-backs in the last
+  30 days, and until when booking is paused, to themselves and admins.
+
 ## Profile photos and Top technicians
 
 Anyone can add a profile photo: the app uploads a small square JPEG to the private Storage bucket

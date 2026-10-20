@@ -112,6 +112,7 @@ export type Database = {
           created_at: string
           event: string
           id: number
+          last_minute: boolean
           note: string | null
           status: Database["public"]["Enums"]["booking_status"]
         }
@@ -121,6 +122,7 @@ export type Database = {
           created_at?: string
           event: string
           id?: never
+          last_minute?: boolean
           note?: string | null
           status: Database["public"]["Enums"]["booking_status"]
         }
@@ -130,6 +132,7 @@ export type Database = {
           created_at?: string
           event?: string
           id?: never
+          last_minute?: boolean
           note?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
         }
@@ -1114,6 +1117,14 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       first_booking_discount: { Args: never; Returns: number }
+      last_minute_record: {
+        Args: { person?: string }
+        Returns: {
+          booking_paused_until: string
+          cancellations: number
+          give_backs: number
+        }[]
+      }
       mark_arrived: {
         Args: { booking_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]

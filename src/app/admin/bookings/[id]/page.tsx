@@ -13,7 +13,7 @@ import { LiveUpdates } from "@/components/live-updates";
 import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { BOOKING_FILTERS, lateAt, takenAt } from "@/lib/admin";
+import { BOOKING_FILTERS, lateAt } from "@/lib/admin";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
@@ -27,6 +27,7 @@ import {
   isFinished,
   mapsLink,
   quoteItems,
+  takenAt,
   UNDER_WAY,
 } from "@/lib/bookings";
 import { withSignedUrls } from "@/lib/documents";
@@ -71,7 +72,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution, reporter_id, reporter:profiles!reports_reporter_id_fkey(full_name))",
+      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution, reporter_id, reporter:profiles!reports_reporter_id_fkey(full_name))",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -91,8 +92,14 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   }
 
   const people = [booking.customer_id, booking.technician_id].filter((p): p is string => p !== null);
-  const [{ data: emails }, { data: phones }, { data: technicians }, { data: messages }, { data: suspension }] =
-    await Promise.all([
+  const [
+    { data: emails },
+    { data: phones },
+    { data: technicians },
+    { data: messages },
+    { data: suspension },
+    { data: record },
+  ] = await Promise.all([
     supabase.rpc("admin_emails", { user_ids: people }),
     supabase.from("phone_numbers").select("user_id, phone").in("user_id", people),
     // Who could do it: approved technicians in this service (also for a job whose technician hasn't set off).
@@ -110,6 +117,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       .eq("booking_id", booking.id)
       .order("created_at"),
     supabase.from("account_suspensions").select("reason, suspended_at").eq("user_id", booking.customer_id).maybeSingle(),
+    supabase.rpc("last_minute_record", { person: booking.customer_id }).single(),
   ]);
   const emailOf = (userId: string | null) => emails?.find((e) => e.id === userId)?.email ?? null;
   const phoneOf = (userId: string | null) => phones?.find((p) => p.user_id === userId)?.phone ?? null;
@@ -230,6 +238,13 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         <DetailRow icon={UserRound} label="Customer">
           {customerName}
           {suspension && <span className="block font-semibold text-danger">Suspended</span>}
+          {record && record.cancellations > 0 && (
+            <span className="block text-danger">
+              {record.cancellations === 1 ? "1 last-minute cancellation" : `${record.cancellations} last-minute cancellations`}{" "}
+              in 30 days
+              {record.booking_paused_until && `; can't book until ${formatDateTime(record.booking_paused_until)}`}
+            </span>
+          )}
           <Email address={emailOf(booking.customer_id)} />
           <PhoneNumber phone={phoneOf(booking.customer_id)} />
         </DetailRow>

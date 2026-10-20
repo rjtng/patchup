@@ -1,4 +1,4 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, CalendarX, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -34,7 +34,8 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }] = await Promise.all([
+  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }, { data: record }] =
+    await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
     supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
     supabase
@@ -49,6 +50,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
       .order("scheduled_at", { ascending: false })
       .limit(20),
     supabase.rpc("paybacks", { technician: id }),
+    supabase.rpc("last_minute_record", { person: id }).single(),
   ]);
   const t = rows?.[0];
   if (!t) {
@@ -122,6 +124,14 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
             <span className="block text-muted">{t.is_available ? "Taking new jobs now" : "Not taking new jobs now"}</span>
           )}
         </DetailRow>
+        {record && record.give_backs > 0 && (
+          <DetailRow icon={CalendarX} label="Last-minute give-backs">
+            <span className="font-semibold text-danger">
+              {record.give_backs === 1 ? "1 job" : `${record.give_backs} jobs`} in the last 30 days
+            </span>
+            <span className="block text-muted">Given back less than 2 hours before the visit, or on the way</span>
+          </DetailRow>
+        )}
         {owed && (
           <DetailRow icon={Banknote} label="PatchUp owes them">
             {formatPeso(owed.amount)} for first-booking offers on {jobsLabel(owed.jobs.length)}

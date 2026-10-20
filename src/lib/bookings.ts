@@ -94,6 +94,12 @@ export const EVENT_LABELS: Record<string, string> = {
   rescheduled: "Visit time changed",
 };
 
+// The same steps at the last minute (booking_events.last_minute; see the booking limits migration).
+export const LAST_MINUTE_LABELS: Record<string, string> = {
+  cancelled: "Cancelled at the last minute",
+  declined: "Technician gave it back at the last minute; finding another",
+};
+
 // From accepted until done: while a job is under way, its customer and
 // technician can see each other's mobile number (the access rules decide).
 export const UNDER_WAY: BookingStatus[] = ["accepted", "en_route", "arrived", "quoted", "in_progress"];
@@ -102,6 +108,40 @@ export const UNDER_WAY: BookingStatus[] = ["accepted", "en_route", "arrived", "q
 export const CUSTOMER_CAN_CANCEL: BookingStatus[] = ["requested", "accepted", "en_route"];
 // Moving the visit: until the technician sets off.
 export const CAN_RESCHEDULE: BookingStatus[] = ["requested", "accepted"];
+
+/** When the technician who has the job took it, or the visit last moved (as the database's private.taken_at). */
+export function takenAt(booking: { created_at: string; booking_events: { event: string; created_at: string }[] }) {
+  const taken = booking.booking_events
+    .filter((e) => e.event === "accepted" || e.event === "assigned" || e.event === "rescheduled")
+    .map((e) => Date.parse(e.created_at));
+  return taken.length > 0 ? Math.max(...taken) : Date.parse(booking.created_at);
+}
+
+// --- Last minute (see the booking limits migration) --------------------------
+// A technician has the job, and it's less than 2 hours to the visit or they're
+// on the way. The first 10 minutes after they took it (or the time last
+// changed) don't count.
+
+export const LAST_MINUTE_MS = 2 * 60 * 60 * 1000;
+const LAST_MINUTE_GRACE_MS = 10 * 60 * 1000;
+/** How often a customer can move a visit once a technician has it (or was asked for). */
+export const MAX_MOVES = 2;
+/** Last-minute cancellations in 30 days that pause a customer's booking. */
+export const PAUSE_AFTER = 3;
+
+/** A job with a technician, as far as last minute goes. */
+export type LastMinuteCheck = { status: BookingStatus; scheduledAt: string; /** See takenAt. */ takenAt: number };
+
+/** Whether giving back the job now is last-minute (as private.is_last_minute). */
+export const isLastMinute = (job: LastMinuteCheck, now: number) =>
+  job.status === "en_route" ||
+  (job.status === "accepted" &&
+    Date.parse(job.scheduledAt) - now < LAST_MINUTE_MS &&
+    now - job.takenAt > LAST_MINUTE_GRACE_MS);
+
+/** Whether the customer cancelling now is: not once the visit time has passed (the technician is running late). */
+export const isLastMinuteCancel = (job: LastMinuteCheck, now: number) =>
+  isLastMinute(job, now) && now < Date.parse(job.scheduledAt);
 
 // A technician's jobs under way hold their time: no other within two hours of
 // one (the database holds to it; see the scheduling migration).
@@ -179,8 +219,9 @@ const LEAD_TIME_MS = 60 * 60 * 1000; // a technician needs at least an hour's no
 /** The visit time as an ISO timestamp, from a Manila date ("2026-10-20") and slot ("10:00"). */
 export const visitTime = (day: string, slot: string) => `${day}T${slot}:00${MANILA_OFFSET}`;
 
-export function isSlotOpen(day: string, slot: string, now: number) {
-  return Date.parse(visitTime(day, slot)) >= now + LEAD_TIME_MS;
+/** Whether a slot is far enough ahead: at least an hour, or `lead` (ms). */
+export function isSlotOpen(day: string, slot: string, now: number, lead = LEAD_TIME_MS) {
+  return Date.parse(visitTime(day, slot)) >= now + lead;
 }
 
 /** The next two weeks of Manila dates, labelled "Today", "Tomorrow", "Wed 22", … */
