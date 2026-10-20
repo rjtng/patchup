@@ -82,23 +82,27 @@ export default function TermsPage() {
         <LegalSection title="Reviews, messages and photos">
           <p>
             Be honest and respectful. Don&apos;t post anything abusive, threatening, discriminatory or misleading, or
-            other people&apos;s private information. PatchUp may remove content that breaks these terms.
+            other people&apos;s private information. PatchUp may hide a review or remove a message that breaks these
+            terms; we tell you when we hide your review.
           </p>
         </LegalSection>
 
         <LegalSection title="Our part">
           <p>
             We work to keep PatchUp running and its technicians checked, but each technician is responsible for their
-            own work. If something goes wrong with a job, write to {LEGAL.email} and we&apos;ll help sort it out with
-            the technician. To the extent the law allows, PatchUp isn&apos;t liable for indirect losses from using the
-            app. Nothing in these terms limits your rights under the Consumer Act of the Philippines.
+            own work. If something goes wrong with a job, tap &quot;Report a problem&quot; on the booking (or write to{" "}
+            {LEGAL.email}): we&apos;ll look into it, help sort it out with the other side, and tell you what we did. To
+            the extent the law allows, PatchUp isn&apos;t liable for indirect losses from using the app. Nothing in
+            these terms limits your rights under the Consumer Act of the Philippines.
           </p>
         </LegalSection>
 
         <LegalSection title="Suspending and deleting accounts">
           <p>
-            PatchUp may suspend an account that breaks these terms. You can delete your account at any time from your
-            Profile, once none of your bookings or jobs is under way.
+            PatchUp may suspend an account that breaks these terms: a suspended customer can&apos;t book new repairs,
+            and a suspended technician can&apos;t take new jobs, until it&apos;s lifted. We tell you when we suspend
+            your account. You can delete your account at any time from your Profile, once none of your bookings or jobs
+            is under way.
           </p>
         </LegalSection>
 

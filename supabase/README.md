@@ -39,7 +39,9 @@ supabase/
 | `technician_locations` | Where a technician on the way is now (only during the trip)                 |
 | `receipts`            | One per completed booking: its receipt number (in order) and when it was issued |
 | `payouts`, `payout_bookings` | What PatchUp paid each technician back, and for which jobs           |
-| `reviews`             | One star rating per completed booking                                         |
+| `reviews`             | One star rating per completed booking (admins can hide one)                  |
+| `reports`             | Problems a customer or technician reported with a booking, and how PatchUp resolved them |
+| `account_suspensions` | Customers PatchUp suspended (they can't book new repairs), and why            |
 | `notifications`       | What each person has been told (the bell and Notifications), read or not      |
 | `push_subscriptions`  | Devices that agreed to show phone notifications, and whose they are           |
 
@@ -139,6 +141,21 @@ chat (the customer still sees everything).
 - Customers rate a completed booking once with `submit_review` (1 to 5 stars, optional comment).
   The technician is notified, and `technician_profiles.rating_avg` / `rating_count` update by
   themselves. Reviews are public and show only the reviewer's first name.
+
+## Reports and moderation
+
+- `report_problem(booking_id, reason, details)`: the booking's customer or technician reports a
+  problem (one open report each per booking); admins are notified. Only the reporter and admins
+  read reports.
+- `resolve_report(report_id, note)`: admins close it; the reporter gets the note.
+- `set_review_hidden(booking_id, hidden)`: admins hide a review (only its customer and admins still
+  see it, and it stops counting in the rating; the customer is told), or show it again.
+- `set_message_removed(message_id, removed)`: admins replace a message with "Removed by PatchUp"
+  for both sides (in the notification that quoted it too), keeping what it said in
+  `private.removed_messages` (nobody reads that through the API), or put it back.
+- `set_customer_suspended(customer_id, suspended, reason)`: admins suspend a customer
+  (`create_booking` refuses them; bookings they have go on) or lift it; they're told either way.
+  Technicians are still suspended through their approval status.
 
 ## Live tracking
 

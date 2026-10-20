@@ -44,7 +44,7 @@ async function Conversation({ params }: { params: PageProps<"/chat/[id]">["param
       .maybeSingle(),
     supabase
       .from("messages")
-      .select("id, body, created_at, sender_id")
+      .select("id, body, created_at, sender_id, removed_at")
       .eq("booking_id", id)
       .order("created_at", { ascending: false })
       .limit(200),

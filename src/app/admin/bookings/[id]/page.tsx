@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarClock, Mail, MapPin, Phone, UserRound, Wrench } from "lucide-react";
+import { CalendarCheck, CalendarClock, Flag, Mail, MapPin, Phone, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -19,6 +19,8 @@ import {
   amountDue,
   CLASH_WINDOW_MS,
   dueParts,
+  formatDateTime,
+  formatDay,
   formatPeso,
   formatSchedule,
   fullAddress,
@@ -28,11 +30,17 @@ import {
   UNDER_WAY,
 } from "@/lib/bookings";
 import { withSignedUrls } from "@/lib/documents";
+import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
+import { ADMIN_REASON, type ReportReason } from "@/lib/reports";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
 import { AdminCancel } from "./admin-cancel";
 import { AssignTechnician } from "./assign-technician";
+import { HideReview } from "./hide-review";
+import { RemoveMessage } from "./remove-message";
+import { ResolveReport } from "./resolve-report";
+import { SuspendCustomer } from "./suspend-customer";
 
 export const metadata: Metadata = { title: "Booking" };
 
@@ -63,12 +71,13 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment), booking_photos(id, storage_path, created_at), receipts(number)",
+      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution, reporter_id, reporter:profiles!reports_reporter_id_fkey(full_name))",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
     .order("created_at", { referencedTable: "booking_photos" })
+    .order("created_at", { referencedTable: "reports" })
     .maybeSingle();
   if (!booking) {
     return (
@@ -82,7 +91,8 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   }
 
   const people = [booking.customer_id, booking.technician_id].filter((p): p is string => p !== null);
-  const [{ data: emails }, { data: phones }, { data: technicians }] = await Promise.all([
+  const [{ data: emails }, { data: phones }, { data: technicians }, { data: messages }, { data: suspension }] =
+    await Promise.all([
     supabase.rpc("admin_emails", { user_ids: people }),
     supabase.from("phone_numbers").select("user_id, phone").in("user_id", people),
     // Who could do it: approved technicians in this service (also for a job whose technician hasn't set off).
@@ -93,6 +103,13 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
           .eq("technician_services.category_id", booking.category_id)
           .eq("verification_status", "approved")
       : Promise.resolve({ data: null }),
+    // The chat, for looking into a reported problem (and removing what breaks the rules).
+    supabase
+      .from("messages")
+      .select("id, body, created_at, sender_id, removed_at, sender:profiles!messages_sender_id_fkey(full_name)")
+      .eq("booking_id", booking.id)
+      .order("created_at"),
+    supabase.from("account_suspensions").select("reason, suspended_at").eq("user_id", booking.customer_id).maybeSingle(),
   ]);
   const emailOf = (userId: string | null) => emails?.find((e) => e.id === userId)?.email ?? null;
   const phoneOf = (userId: string | null) => phones?.find((p) => p.user_id === userId)?.phone ?? null;
@@ -119,6 +136,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       : Promise.resolve({ data: [] }),
   ]);
   const customerName = booking.customer?.full_name || "The customer";
+  const roleOf = (userId: string) => (userId === booking.customer_id ? "customer" : "technician");
   const technicianName = booking.technician?.full_name || null;
   // A technician who hasn't set off by now: read once per request, after the data above.
   const late =
@@ -140,6 +158,39 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      {booking.reports.length > 0 && (
+        <section aria-labelledby="reports" className="flex flex-col gap-4 rounded-card bg-white p-5 shadow-sm">
+          <h2 id="reports" className="flex items-center gap-2 text-base font-bold text-ink">
+            <Flag aria-hidden className="size-5 text-danger" />
+            Reported problems
+          </h2>
+          {booking.reports.map((report) => {
+            const reporter = report.reporter?.full_name || `The ${roleOf(report.reporter_id)}`;
+            return (
+              <article
+                key={report.id}
+                aria-label={`Report from ${reporter}`}
+                className="border-t border-line pt-4 text-sm first-of-type:border-t-0 first-of-type:pt-0"
+              >
+                <p className="font-semibold text-ink">{ADMIN_REASON[report.reason as ReportReason] ?? report.reason}</p>
+                <p className="text-muted">
+                  {reporter} ({roleOf(report.reporter_id)}), {formatDateTime(report.created_at)}
+                </p>
+                <p className="mt-2 whitespace-pre-line leading-relaxed text-ink">{report.details}</p>
+                {report.resolved_at ? (
+                  <p className="mt-3 rounded-field bg-brand-navy/5 px-4 py-3 text-ink">
+                    <span className="font-semibold">Resolved {formatDay(report.resolved_at)}: </span>
+                    {report.resolution}
+                  </p>
+                ) : (
+                  <ResolveReport reportId={report.id} reporterName={reporter} />
+                )}
+              </article>
+            );
+          })}
+        </section>
+      )}
 
       <BookingPhotos bookingId={booking.id} photos={photos} editable={false} intro="From the customer." />
 
@@ -178,6 +229,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       <section aria-label="People" className="flex flex-col gap-4 rounded-card bg-white p-5 text-sm shadow-sm">
         <DetailRow icon={UserRound} label="Customer">
           {customerName}
+          {suspension && <span className="block font-semibold text-danger">Suspended</span>}
           <Email address={emailOf(booking.customer_id)} />
           <PhoneNumber phone={phoneOf(booking.customer_id)} />
         </DetailRow>
@@ -244,6 +296,44 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
           {booking.reviews.comment && (
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{booking.reviews.comment}</p>
           )}
+          {booking.reviews.hidden_at && (
+            <p className="text-sm font-semibold text-danger">
+              Hidden since {formatDay(booking.reviews.hidden_at)}: only the customer and admins see it.
+            </p>
+          )}
+          <div className="mt-2">
+            <HideReview bookingId={booking.id} hidden={Boolean(booking.reviews.hidden_at)} customerName={customerName} />
+          </div>
+        </section>
+      )}
+
+      {messages && messages.length > 0 && (
+        <section aria-label="Chat" className="rounded-card bg-white p-5 shadow-sm">
+          <details>
+            <summary className="flex min-h-11 cursor-pointer items-center text-base font-bold text-ink">
+              Read the chat ({messages.length === 1 ? "1 message" : `${messages.length} messages`})
+            </summary>
+            <p className="mt-1 text-sm text-muted">
+              Read it when looking into a reported problem. Removing a message replaces it with &ldquo;Removed by
+              PatchUp&rdquo; for both sides.
+            </p>
+            <ol className="mt-3 flex flex-col divide-y divide-line text-sm">
+              {messages.map((m) => (
+                <li key={m.id} className="py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate font-semibold text-ink">
+                      {m.sender?.full_name || "No name"} ({roleOf(m.sender_id)})
+                    </span>
+                    <RemoveMessage messageId={m.id} removed={Boolean(m.removed_at)} />
+                  </div>
+                  <p className="text-xs text-muted">{formatDateTime(m.created_at)}</p>
+                  <p className={cn("mt-1 whitespace-pre-line leading-relaxed", m.removed_at ? "italic text-muted" : "text-ink")}>
+                    {m.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </details>
         </section>
       )}
 
@@ -261,6 +351,8 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       )}
 
       <BookingTimeline events={booking.booking_events} />
+
+      <SuspendCustomer customerId={booking.customer_id} name={customerName} suspension={suspension} />
 
       {!isFinished(booking.status) && <AdminCancel bookingId={booking.id} />}
     </div>

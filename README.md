@@ -110,6 +110,14 @@ for them see those times as taken. Until the technician sets off, the customer (
 change the visit time from the booking; the technician is told, and the reminders go again for the
 new time.
 
+**Reporting a problem, and moderation:** the customer (from the booking) or the technician (from the
+job) taps "Report a problem", says what went wrong and what happened, and admins are told. Admin →
+Reports (from the overview) lists the open ones; on the booking's admin page an admin reads the chat,
+resolves the report with a note the reporter gets, and can hide a review that breaks the rules (it
+stops counting in the rating; the customer is told), remove a chat message (both sides see "Removed
+by PatchUp"; it can be put back), or suspend the customer (they can't book until it's lifted, and
+Home tells them why).
+
 **Photos and Top technicians:** anyone can add a profile photo from Profile (the app makes it a
 small square JPEG); technicians' show on their profile, in search, when picking a technician and on
 the customer's Track card, and a customer's own on Home. Home lists Top technicians: approved

@@ -9,6 +9,7 @@ import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
+import { ReportProblem } from "@/components/reports/report-problem";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { ReviewItem } from "@/components/reviews/stars";
@@ -61,12 +62,13 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
     .order("created_at", { referencedTable: "booking_photos" })
+    .order("created_at", { referencedTable: "reports" })
     .maybeSingle();
   const me = auth?.claims.sub;
   // Open requests, or this technician's own jobs (the access rules hide the rest).
@@ -245,6 +247,8 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
       />
 
       <BookingTimeline events={job.booking_events} />
+
+      {assigned && <ReportProblem bookingId={job.id} technician reports={job.reports} />}
     </div>
   );
 }

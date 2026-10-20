@@ -21,8 +21,12 @@ export default function AdminOverviewPage() {
 
 async function Dashboard() {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_overview");
+  const [{ data, error }, { data: reports }] = await Promise.all([
+    supabase.rpc("admin_overview"),
+    supabase.from("reports").select("id").is("resolved_at", null),
+  ]);
   const o = data ? overview(data) : null;
+  const openReports = reports?.length ?? 0;
   if (error || !o) {
     return <p className="px-6 pt-6 text-sm text-danger">We couldn&apos;t load the overview. Refresh the page to try again.</p>;
   }
@@ -42,6 +46,13 @@ async function Dashboard() {
           label={o.unassigned_requests === 1 ? "request nobody has taken" : "requests nobody has taken"}
           note={o.stale_requests > 0 ? `${o.stale_requests} waiting too long` : undefined}
           urgent={o.stale_requests > 0}
+        />
+        <Tile
+          href="/admin/reports"
+          value={openReports}
+          label={openReports === 1 ? "problem reported" : "problems reported"}
+          note="By customers and technicians"
+          urgent={openReports > 0}
         />
         <Tile
           href="/admin/payouts"

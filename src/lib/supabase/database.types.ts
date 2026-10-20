@@ -16,6 +16,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_suspensions: {
+        Row: {
+          reason: string
+          suspended_at: string
+          suspended_by: string | null
+          user_id: string
+        }
+        Insert: {
+          reason?: string
+          suspended_at?: string
+          suspended_by?: string | null
+          user_id: string
+        }
+        Update: {
+          reason?: string
+          suspended_at?: string
+          suspended_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_suspensions_suspended_by_fkey"
+            columns: ["suspended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_suspensions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       addresses: {
         Row: {
           barangay: string
@@ -313,6 +349,7 @@ export type Database = {
           booking_id: string
           created_at: string
           id: string
+          removed_at: string | null
           sender_id: string
           technician_id: string | null
         }
@@ -321,6 +358,7 @@ export type Database = {
           booking_id: string
           created_at?: string
           id?: string
+          removed_at?: string | null
           sender_id?: string
           technician_id?: string | null
         }
@@ -329,6 +367,7 @@ export type Database = {
           booking_id?: string
           created_at?: string
           id?: string
+          removed_at?: string | null
           sender_id?: string
           technician_id?: string | null
         }
@@ -644,6 +683,64 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          booking_id: string
+          created_at: string
+          details: string
+          id: string
+          reason: string
+          reporter_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          details: string
+          id?: string
+          reason: string
+          reporter_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          details?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string
@@ -651,6 +748,7 @@ export type Database = {
           created_at: string
           customer_id: string
           customer_name: string
+          hidden_at: string | null
           rating: number
           technician_id: string
         }
@@ -660,6 +758,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           customer_name?: string
+          hidden_at?: string | null
           rating: number
           technician_id: string
         }
@@ -669,6 +768,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           customer_name?: string
+          hidden_at?: string | null
           rating?: number
           technician_id?: string
         }
@@ -1035,12 +1135,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_problem: {
+        Args: { booking_id: string; details: string; reason: string }
+        Returns: Database["public"]["Tables"]["reports"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reschedule_booking: {
         Args: { booking_id: string; scheduled_at: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
         SetofOptions: {
           from: "*"
           to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_report: {
+        Args: { note: string; report_id: string }
+        Returns: Database["public"]["Tables"]["reports"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "reports"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1075,6 +1195,24 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "quotes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_customer_suspended: {
+        Args: { customer_id: string; reason?: string; suspended: boolean }
+        Returns: boolean
+      }
+      set_message_removed: {
+        Args: { message_id: string; removed: boolean }
+        Returns: undefined
+      }
+      set_review_hidden: {
+        Args: { booking_id: string; hidden: boolean }
+        Returns: Database["public"]["Tables"]["reviews"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
           isOneToOne: true
           isSetofReturn: false
         }
