@@ -12,19 +12,26 @@ export type Candidate = { id: string; name: string; city: string; available: boo
 /**
  * For a request nobody has taken (or one the chosen technician hasn't
  * answered): pick an approved technician in the service and give them the
- * job. Both they and the customer are told.
+ * job. Both they and the customer are told. For a job a technician has taken
+ * but not set off for (`current`), the same gives it to someone else, and the
+ * technician who had it is told too.
  */
 export function AssignTechnician({
   bookingId,
   category,
   askedFor,
-  technicians,
+  current = null,
+  technicians: candidates,
 }: {
   bookingId: string;
   category: string;
   askedFor: string | null;
+  /** The technician who has the job, and whether they're running late. */
+  current?: { id: string; name: string; late: boolean } | null;
   technicians: Candidate[];
 }) {
+  const technicians = candidates.filter((t) => t.id !== current?.id);
+  const title = current ? "Give the job to someone else" : "Assign a technician";
   const router = useRouter();
   const [chosen, setChosen] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -47,21 +54,27 @@ export function AssignTechnician({
 
   if (technicians.length === 0) {
     return (
-      <section aria-label="Assign a technician" className="rounded-card bg-white p-5 text-sm shadow-sm">
-        <h2 className="text-base font-bold text-ink">Assign a technician</h2>
-        <p className="mt-1 text-muted">There are no approved {category.toLowerCase()} technicians yet.</p>
+      <section aria-label={title} className="rounded-card bg-white p-5 text-sm shadow-sm">
+        <h2 className="text-base font-bold text-ink">{title}</h2>
+        <p className="mt-1 text-muted">
+          There are no {current ? "other " : ""}approved {category.toLowerCase()} technicians yet.
+        </p>
       </section>
     );
   }
 
   return (
-    <section aria-label="Assign a technician" className="rounded-card bg-white p-5 shadow-sm">
+    <section aria-label={title} className="rounded-card bg-white p-5 shadow-sm">
       <fieldset>
-        <legend className="text-base font-bold text-ink">Assign a technician</legend>
+        <legend className="text-base font-bold text-ink">{title}</legend>
         <p className="mt-1 text-sm text-muted">
-          {askedFor
-            ? "The customer asked for someone who hasn't answered yet. You can give the job to them or someone else."
-            : "Nobody has taken this request yet. Give it to an approved technician."}
+          {current
+            ? current.late
+              ? `${current.name} hasn't set off for this visit. Choose someone else to give it to; the new technician, ${current.name} and the customer are all told.`
+              : `${current.name} has this job. If they can't do it, choose someone else to give it to; the new technician, ${current.name} and the customer are all told.`
+            : askedFor
+              ? "The customer asked for someone who hasn't answered yet. You can give the job to them or someone else."
+              : "Nobody has taken this request yet. Give it to an approved technician."}
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {technicians.map((t) => (
@@ -105,7 +118,7 @@ export function AssignTechnician({
         </p>
       )}
       <Button className="mt-4" onClick={assign} disabled={!picked || pending}>
-        {pending ? "Assigning…" : picked ? `Assign ${picked.name}` : "Choose a technician"}
+        {pending ? "Assigning…" : picked ? `${current ? "Give it to" : "Assign"} ${picked.name}` : "Choose a technician"}
       </Button>
     </section>
   );

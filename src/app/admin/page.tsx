@@ -50,6 +50,8 @@ async function Dashboard() {
           href="/admin/bookings?show=active"
           value={o.active_bookings}
           label={o.active_bookings === 1 ? "job in progress" : "jobs in progress"}
+          note={o.late_jobs > 0 ? `${o.late_jobs} running late` : undefined}
+          urgent={o.late_jobs > 0}
         />
         <Tile
           href="/admin/bookings?show=open"

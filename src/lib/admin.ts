@@ -27,6 +27,7 @@ export type Overview = {
   stale_requests: number;
   awaiting_technician: number;
   active_bookings: number;
+  late_jobs: number;
   booked_week: number;
   completed_week: number;
   completed_value_week: number;
@@ -45,6 +46,7 @@ export function overview(data: Json): Overview | null {
     stale_requests: count("stale_requests"),
     awaiting_technician: count("awaiting_technician"),
     active_bookings: count("active_bookings"),
+    late_jobs: count("late_jobs"),
     booked_week: count("booked_week"),
     completed_week: count("completed_week"),
     completed_value_week: count("completed_value_week"),
@@ -108,6 +110,21 @@ export function waitingSince(booking: { created_at: string; booking_events: { ev
  */
 export const followUpAt = (since: number, scheduledAt: number) =>
   Math.min(since + 30 * MINUTE, Math.max(since + 10 * MINUTE, scheduledAt - 120 * MINUTE));
+
+/** When the technician who has the job took it (as the database's private.taken_at). */
+export function takenAt(booking: { created_at: string; booking_events: { event: string; created_at: string }[] }) {
+  const taken = booking.booking_events
+    .filter((e) => e.event === "accepted" || e.event === "assigned")
+    .map((e) => Date.parse(e.created_at));
+  return taken.length > 0 ? Math.max(...taken) : Date.parse(booking.created_at);
+}
+
+/**
+ * When a technician who hasn't set off is running late: 30 minutes after the
+ * visit time, or after they took the job if that was later. The follow-up job
+ * tells admins then (private.late_at in the database).
+ */
+export const lateAt = (scheduledAt: number, taken: number) => Math.max(scheduledAt, taken) + 30 * MINUTE;
 
 /** How long something has been waiting: "5 min", "2 hr", "3 days". */
 export function formatWaiting(ms: number) {

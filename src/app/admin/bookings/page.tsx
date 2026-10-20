@@ -4,7 +4,16 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CHIP_TONES, StatusChip } from "@/components/bookings/status-chip";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { BOOKING_FILTERS, bookingFilter, followUpAt, formatWaiting, waitingSince, type BookingFilter } from "@/lib/admin";
+import {
+  BOOKING_FILTERS,
+  bookingFilter,
+  followUpAt,
+  formatWaiting,
+  lateAt,
+  takenAt,
+  waitingSince,
+  type BookingFilter,
+} from "@/lib/admin";
 import { formatDay, formatPeso, formatSchedule } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
@@ -73,6 +82,8 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
             {bookings.map((b) => {
               const since = waitingSince(b);
               const waited = now - since;
+              // A technician who hasn't set off by now (the follow-up has told admins).
+              const late = b.status === "accepted" && now >= lateAt(Date.parse(b.scheduled_at), takenAt(b));
               const customer = b.customer?.full_name || "A customer";
               const technician = b.technician?.full_name || (b.technician_id ? "A technician" : null);
               return (
@@ -117,6 +128,10 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
                               ? `Waiting for ${b.technician?.full_name ? firstName(b.technician.full_name) : "the technician"}`
                               : "Nobody has taken it"}{" "}
                             · {formatWaiting(waited)}
+                          </span>
+                        ) : late ? (
+                          <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-semibold", CHIP_TONES.cancelled)}>
+                            Not on the way · {formatWaiting(now - Date.parse(b.scheduled_at))} late
                           </span>
                         ) : (
                           <StatusChip status={b.status} />

@@ -124,7 +124,7 @@ select is(
   public.admin_overview(),
   jsonb_build_object(
     'pending_technicians', 2, 'approved_technicians', 2, 'available_technicians', 1, 'customers', 2,
-    'unassigned_requests', 2, 'stale_requests', 1, 'awaiting_technician', 1, 'active_bookings', 1,
+    'unassigned_requests', 2, 'stale_requests', 1, 'awaiting_technician', 1, 'active_bookings', 1, 'late_jobs', 0,
     'booked_week', 6, 'completed_week', 1, 'completed_value_week', 850, 'cancelled_week', 1
   ),
   'The overview counts technicians, customers, waiting requests and the last 7 days'
