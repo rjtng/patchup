@@ -44,7 +44,7 @@ async function BookingFormLoader({
   const previousId = typeof again === "string" && UUID.test(again) ? again : null;
 
   const supabase = await createClient();
-  const [{ data: category }, { data: addresses }, technician, { data: discount }, { data: previous }] =
+  const [{ data: category }, { data: addresses }, technician, { data: discount }, { data: previous }, { data: busy }] =
     await Promise.all([
       // Read fresh here (not from the cached list), so the fee shown is the one charged.
       supabase
@@ -69,6 +69,8 @@ async function BookingFormLoader({
             .eq("id", previousId)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      // When the technician asked for is taken (booking holds to it too).
+      technicianId ? supabase.rpc("busy_times", { technician: technicianId }) : Promise.resolve({ data: [] }),
     ]);
   if (!category) notFound();
   // The saved address it was at, if it's still saved.
@@ -91,6 +93,7 @@ async function BookingFormLoader({
         technicianMissing={Boolean(technicianId) && !technician.data}
         addresses={addresses ?? []}
         discount={discount ?? 0}
+        busy={technician.data ? (busy ?? []) : []}
         initial={
           previous && {
             appliance: previous.appliance,

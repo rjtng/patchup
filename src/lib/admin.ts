@@ -115,10 +115,10 @@ export function waitingSince(booking: { created_at: string; booking_events: { ev
 export const followUpAt = (since: number, scheduledAt: number) =>
   Math.min(since + 30 * MINUTE, Math.max(since + 10 * MINUTE, scheduledAt - 120 * MINUTE));
 
-/** When the technician who has the job took it (as the database's private.taken_at). */
+/** When the technician who has the job took it, or the visit last moved (as the database's private.taken_at). */
 export function takenAt(booking: { created_at: string; booking_events: { event: string; created_at: string }[] }) {
   const taken = booking.booking_events
-    .filter((e) => e.event === "accepted" || e.event === "assigned")
+    .filter((e) => e.event === "accepted" || e.event === "assigned" || e.event === "rescheduled")
     .map((e) => Date.parse(e.created_at));
   return taken.length > 0 ? Math.max(...taken) : Date.parse(booking.created_at);
 }

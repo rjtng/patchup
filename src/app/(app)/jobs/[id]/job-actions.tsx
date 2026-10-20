@@ -43,6 +43,7 @@ export function JobActions({
   inspectionFee,
   discount,
   amountDue,
+  clash = null,
 }: {
   jobId: string;
   status: BookingStatus;
@@ -51,6 +52,8 @@ export function JobActions({
   /** Taken off what the customer pays (their first-booking offer). */
   discount: number;
   amountDue: number;
+  /** A request: the job of theirs it comes within two hours of, which stops them taking it. */
+  clash?: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<Step | null>(null);
@@ -114,7 +117,14 @@ export function JobActions({
   if (status === "requested") {
     actions = (
       <>
-        {button("accept", "Accept job")}
+        {clash ? (
+          <p className="rounded-card bg-white p-5 text-sm text-ink shadow-sm">
+            You already have a job then: {clash}. Leave this one for another technician
+            {mine ? ", or turn it down" : ""}.
+          </p>
+        ) : (
+          button("accept", "Accept job")
+        )}
         {mine && button("decline", "Turn down", "danger")}
       </>
     );

@@ -18,6 +18,7 @@ import { CardsSkeleton } from "@/components/ui/skeleton";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
+  clashes,
   dueParts,
   formatDay,
   formatPeso,
@@ -88,6 +89,18 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   // What the first-booking offer took off what the customer pays: PatchUp pays the technician that back.
   const payback = due.inspection + due.repair - due.total;
   const photos = await withSignedUrls(supabase, job.booking_photos, PHOTO_BUCKET);
+  // A request within two hours of a job they have can't be taken (see accept_booking).
+  const clash =
+    job.status === "requested"
+      ? ((
+          await supabase
+            .from("bookings")
+            .select("appliance, scheduled_at")
+            .eq("technician_id", me ?? "")
+            .in("status", UNDER_WAY)
+            .neq("id", job.id)
+        ).data?.find((other) => clashes(Date.parse(job.scheduled_at), [Date.parse(other.scheduled_at)])) ?? null)
+      : null;
   // The customer's number, while the job is under way (the access rules return it only then).
   const phone =
     assigned && UNDER_WAY.includes(job.status)
@@ -228,6 +241,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         inspectionFee={job.inspection_fee}
         discount={job.discount}
         amountDue={due.total}
+        clash={clash && `${clash.appliance}, ${formatSchedule(clash.scheduled_at)}`}
       />
 
       <BookingTimeline events={job.booking_events} />

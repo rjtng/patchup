@@ -167,7 +167,7 @@ insert into booking_ids select 'drain', id from public.create_booking(
   appliance => 'Drain', problem => 'Slow', scheduled_at => pg_temp.visit());
 insert into booking_ids select 'shower', id from public.create_booking(
   category_id => pg_temp.category('plumbing'), address_id => '00000000-0000-0000-0000-00000000a101',
-  appliance => 'Shower', problem => 'No pressure', scheduled_at => pg_temp.visit());
+  appliance => 'Shower', problem => 'No pressure', scheduled_at => pg_temp.visit() + interval '3 hours');
 select pg_temp.login_as('00000000-0000-0000-0000-000000000202');
 select public.accept_booking(pg_temp.booking('drain'));
 select public.mark_en_route(pg_temp.booking('drain'));

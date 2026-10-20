@@ -90,6 +90,8 @@ export const EVENT_LABELS: Record<string, string> = {
   // From the follow-up on technicians who don't set off (see the visit reminders migration).
   late: "Technician running late; the PatchUp team is checking",
   unassigned: "PatchUp gave the job to another technician",
+  // A customer or admin moved the visit (see the scheduling migration); the note says from when.
+  rescheduled: "Visit time changed",
 };
 
 // From accepted until done: while a job is under way, its customer and
@@ -98,6 +100,14 @@ export const UNDER_WAY: BookingStatus[] = ["accepted", "en_route", "arrived", "q
 
 // Customers can cancel until the technician arrives (the database enforces it too).
 export const CUSTOMER_CAN_CANCEL: BookingStatus[] = ["requested", "accepted", "en_route"];
+// Moving the visit: until the technician sets off.
+export const CAN_RESCHEDULE: BookingStatus[] = ["requested", "accepted"];
+
+// A technician's jobs under way hold their time: no other within two hours of
+// one (the database holds to it; see the scheduling migration).
+export const CLASH_WINDOW_MS = 2 * 60 * 60 * 1000;
+/** Whether a visit at `at` comes within two hours of one of these busy times (all in ms). */
+export const clashes = (at: number, busy: number[]) => busy.some((b) => Math.abs(b - at) < CLASH_WINDOW_MS);
 
 export const isFinished = (status: BookingStatus) => status === "completed" || status === "cancelled";
 

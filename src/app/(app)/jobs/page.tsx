@@ -8,7 +8,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { isFinished } from "@/lib/bookings";
+import { clashes, isFinished } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/server";
 import { AvailabilityToggle } from "./availability-toggle";
 import { JobCard, type Job } from "./job-card";
@@ -79,6 +79,9 @@ async function JobBoard() {
     // Jobs a customer asked this technician for come first.
     .sort((a, b) => Number(b.technician_id === me) - Number(a.technician_id === me));
   const active = jobs.filter((j) => j.technician_id === me && j.status !== "requested" && !isFinished(j.status));
+  // Requests within two hours of a job they have can't be taken (see accept_booking).
+  const taken = active.map((j) => Date.parse(j.scheduled_at));
+  const marked = requests.map((j) => ({ ...j, clash: clashes(Date.parse(j.scheduled_at), taken) }));
   const done = jobs.filter((j) => j.technician_id === me && isFinished(j.status)).reverse();
 
   // Their own jobs, and new requests in their services while they're taking jobs.
@@ -116,7 +119,7 @@ async function JobBoard() {
         <PushSettings variant="prompt">Get new requests on this phone, even when PatchUp is closed.</PushSettings>
       )}
 
-      <JobSection title="New requests" jobs={requests} me={me}>
+      <JobSection title="New requests" jobs={marked} me={me}>
         {approved && profile.is_available
           ? "No new requests right now. Requests for your services show up here."
           : "Requests show up here while you're taking new jobs."}

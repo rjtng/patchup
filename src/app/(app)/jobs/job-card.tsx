@@ -12,6 +12,8 @@ export type Job = {
   barangay: string;
   city: string;
   service_categories: { name: string } | null;
+  /** A request within two hours of a job they have: they can't take it. */
+  clash?: boolean;
 };
 
 export function JobCard({ job, me }: { job: Job; me: string }) {
@@ -34,6 +36,11 @@ export function JobCard({ job, me }: { job: Job; me: string }) {
           {askedForYou && (
             <span className="inline-flex rounded-full bg-brand-navy px-3 py-1 text-xs font-semibold text-white">
               Asked for you
+            </span>
+          )}
+          {job.clash && (
+            <span className="inline-flex rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold text-danger">
+              You have a job then
             </span>
           )}
         </span>
