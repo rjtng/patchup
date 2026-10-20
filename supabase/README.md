@@ -238,8 +238,19 @@ offer; bookings already made keep the discount they were made with. Only admins 
 `first_booking_discount()` tells the app what the signed-in customer's next booking would get, so
 Home shows the offer only to customers who haven't booked.
 
-The technician collects the discounted amount in cash, so the offer is ₱100 less for them unless
-PatchUp makes it up; the admin's booking page shows each booking's discount.
+The technician collects the discounted amount in cash, so PatchUp pays them back (see "Payouts").
+
+## Payouts
+
+What PatchUp owes a technician for a completed job is the first-booking offer as it was taken off
+(`private.payback`: never more than the job came to). Admins pay technicians outside the app (GCash,
+bank) and record it with `record_payout(technician, amount, reference)`, which pays everything owed
+to that technician at once: it refuses an amount that isn't what's owed (more jobs since the admin
+looked), records a row in `payouts` and one in `payout_bookings` for each job (so no job is paid
+twice), and tells the technician. `paybacks(technician)` lists each job's payback, paid or not, for
+the app: admins see anyone's, technicians only their own. Technicians can read their own payouts,
+admins all; nobody can change them. The admin dashboard counts what's owed (`payback_owed`, and to
+how many technicians).
 
 ## Services
 

@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { isAdmin } from "@/lib/admin";
 import { withSignedUrls } from "@/lib/documents";
+import { formatPeso } from "@/lib/bookings";
+import { owedByTechnician } from "@/lib/payouts";
 import { isTechnician } from "@/lib/roles";
 import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +47,8 @@ async function ProfileDetails() {
   if (!claims) return null;
   if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories] = await Promise.all([
+  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories, { data: paybacks }] =
+    await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
     supabase
@@ -59,6 +62,7 @@ async function ProfileDetails() {
       .eq("id", claims.sub)
       .maybeSingle(),
     getServiceCategories(),
+    supabase.rpc("paybacks"),
   ]);
   if (!work) {
     return (
@@ -75,6 +79,8 @@ async function ProfileDetails() {
       documents={await withSignedUrls(supabase, documents ?? [])}
     />
   );
+  // First-booking offers PatchUp hasn't paid back yet.
+  const owed = owedByTechnician(paybacks ?? [])[0]?.amount ?? 0;
   // Until they're approved, sending documents is the thing to do.
   const documentsFirst = work.verification_status === "pending" || work.verification_status === "rejected";
 
@@ -96,6 +102,20 @@ async function ProfileDetails() {
             <span className="mt-0.5 block text-sm text-muted">None yet. Customers rate each job once it&apos;s done.</span>
           )}
           <span className="mt-1 block text-sm text-muted">See your profile as customers see it</span>
+        </span>
+        <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
+      </Link>
+      <Link
+        href="/profile/earnings"
+        className="mx-6 mt-4 flex items-center gap-4 rounded-card bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-ink">Earnings</span>
+          <span className="mt-0.5 block text-sm text-muted">
+            {owed > 0
+              ? `PatchUp owes you ${formatPeso(owed)} for first-booking offers`
+              : "Your jobs, cash collected and payments from PatchUp"}
+          </span>
         </span>
         <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
       </Link>

@@ -4,7 +4,7 @@ export type BookingStatus = Enums<"booking_status">;
 
 // Visits happen in the Philippines, so dates and times are always shown and
 // chosen in Manila time, whatever the device's own time zone.
-const TIME_ZONE = "Asia/Manila";
+export const TIME_ZONE = "Asia/Manila";
 const MANILA_OFFSET = "+08:00"; // no daylight saving
 
 export function formatPeso(amount: number) {

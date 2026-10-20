@@ -28,6 +28,8 @@ export type Overview = {
   awaiting_technician: number;
   active_bookings: number;
   late_jobs: number;
+  payback_owed: number;
+  payback_technicians: number;
   booked_week: number;
   completed_week: number;
   completed_value_week: number;
@@ -47,6 +49,8 @@ export function overview(data: Json): Overview | null {
     awaiting_technician: count("awaiting_technician"),
     active_bookings: count("active_bookings"),
     late_jobs: count("late_jobs"),
+    payback_owed: count("payback_owed"),
+    payback_technicians: count("payback_technicians"),
     booked_week: count("booked_week"),
     completed_week: count("completed_week"),
     completed_value_week: count("completed_value_week"),

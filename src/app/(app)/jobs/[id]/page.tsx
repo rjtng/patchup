@@ -84,6 +84,8 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const assigned = mine && job.status !== "requested";
   const onTheWay = assigned && ["accepted", "en_route", "arrived"].includes(job.status);
   const due = amountDue(job);
+  // What the first-booking offer took off what the customer pays: PatchUp pays the technician that back.
+  const payback = due.inspection + due.repair - due.total;
   const photos = await withSignedUrls(supabase, job.booking_photos, PHOTO_BUCKET);
   // The customer's number, while the job is under way (the access rules return it only then).
   const phone =
@@ -154,6 +156,11 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
           <span className="block text-muted">
             {due.repair > 0 || due.discount > 0 ? dueParts(due) : "Inspection fee"}
           </span>
+          {payback > 0 && (
+            <span className="block text-muted">
+              PatchUp pays you back the {formatPeso(payback)} first-booking offer (see Profile → Earnings).
+            </span>
+          )}
         </DetailRow>
       </section>
 
