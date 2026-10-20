@@ -4,7 +4,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatPeso, payable, type BookingStatus } from "@/lib/bookings";
+import { formatPeso, isLastMinute, payable, type BookingStatus, type LastMinuteCheck } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/client";
 import { QuoteForm } from "./quote-form";
 
@@ -12,13 +12,17 @@ type Step = "accept" | "decline" | "en_route" | "arrived" | "complete";
 
 // What each step asks before it runs (the ones that can't be undone).
 type Confirm = { title: string; body: string; yes: string };
-const CONFIRM: Partial<Record<Step, (job: { status: BookingStatus; amount: string }) => Confirm>> = {
-  decline: ({ status }) =>
+type ConfirmFor = { status: BookingStatus; amount: string; lastMinute: boolean };
+const CONFIRM: Partial<Record<Step, (job: ConfirmFor) => Confirm>> = {
+  decline: ({ status, lastMinute }) =>
     status === "requested"
       ? { title: "Turn down this job?", body: "It goes to the other technicians instead.", yes: "Yes, turn it down" }
       : {
           title: "Give this job back?",
-          body: "It goes back to the other technicians, and you won't see the address any more.",
+          body:
+            (lastMinute
+              ? `${status === "en_route" ? "You're on the way" : "The visit is less than 2 hours away"}, so this is a last-minute give-back: PatchUp is told, and it counts on your record. `
+              : "") + "It goes back to the other technicians, and you won't see the address any more.",
           yes: "Yes, give it back",
         },
   complete: ({ amount }) => ({
@@ -44,6 +48,7 @@ export function JobActions({
   discount,
   amountDue,
   clash = null,
+  lastMinute,
 }: {
   jobId: string;
   status: BookingStatus;
@@ -54,10 +59,14 @@ export function JobActions({
   amountDue: number;
   /** A request: the job of theirs it comes within two hours of, which stops them taking it. */
   clash?: string | null;
+  /** Their job, for warning about giving it back at the last minute. */
+  lastMinute?: LastMinuteCheck;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<Step | null>(null);
   const [confirming, setConfirming] = useState<Step | null>(null);
+  // Read when "Give back this job" is tapped.
+  const [lastMinuteNow, setLastMinuteNow] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const run = async (step: Step) => {
@@ -85,7 +94,7 @@ export function JobActions({
     router.refresh();
   };
 
-  const confirm = confirming && CONFIRM[confirming]?.({ status, amount: formatPeso(amountDue) });
+  const confirm = confirming && CONFIRM[confirming]?.({ status, amount: formatPeso(amountDue), lastMinute: lastMinuteNow });
   if (confirming && confirm) {
     return (
       <div role="group" aria-label={confirm.title} className="rounded-card bg-white p-5 shadow-sm">
@@ -107,7 +116,11 @@ export function JobActions({
     <Button
       variant={variant}
       disabled={pending !== null}
-      onClick={() => (CONFIRM[step] ? setConfirming(step) : run(step))}
+      onClick={() => {
+        if (step === "decline") setLastMinuteNow(lastMinute !== undefined && isLastMinute(lastMinute, Date.now()));
+        if (CONFIRM[step]) setConfirming(step);
+        else run(step);
+      }}
     >
       {pending === step ? "One moment…" : label}
     </Button>

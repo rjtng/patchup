@@ -110,6 +110,15 @@ for them see those times as taken. Until the technician sets off, the customer (
 change the visit time from the booking; the technician is told, and the reminders go again for the
 new time.
 
+**Last-minute limits:** once a technician has a visit, the customer can move it twice, until 2 hours
+before, to a time at least 2 hours away. Customers can still cancel until the technician arrives,
+but cancelling less than 2 hours before the visit or once the technician is on the way is
+last-minute (the first 10 minutes after the technician took it don't count, nor a technician
+running late): the app warns first, the timeline says so, and after 3 in 30 days booking pauses
+until 30 days after the first of them (Home and the booking form say until when). A technician
+giving a job back at the last minute is warned too; admins are told at once, and see the counts
+on the customer (admin booking page) and the technician (admin technician page).
+
 **Reporting a problem, and moderation:** the customer (from the booking) or the technician (from the
 job) taps "Report a problem", says what went wrong and what happened, and admins are told. Admin →
 Reports (from the overview) lists the open ones; on the booking's admin page an admin reads the chat,

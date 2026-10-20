@@ -3,17 +3,31 @@
 import { MessageCircle, Phone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { CancelConfirm } from "@/components/bookings/cancel-booking";
+import { CancelConfirm, lastMinuteNow, type CancelCheck } from "@/components/bookings/cancel-booking";
 import { cn } from "@/lib/cn";
 
 const pill =
   "inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border-2 px-3 text-sm font-semibold";
 
 // A coming visit's Call (once the technician has given a number), Chat and
-// Cancel (which asks first).
-export function VisitActions({ bookingId, who, phone }: { bookingId: string; who: string; phone: string | null }) {
-  const [confirming, setConfirming] = useState(false);
-  if (confirming) return <CancelConfirm bookingId={bookingId} onClose={() => setConfirming(false)} />;
+// Cancel (which asks first, warning at the last minute).
+export function VisitActions({
+  bookingId,
+  who,
+  phone,
+  check,
+}: {
+  bookingId: string;
+  who: string;
+  phone: string | null;
+  check: CancelCheck;
+}) {
+  const [confirming, setConfirming] = useState<{ lastMinute?: CancelCheck } | null>(null);
+  if (confirming) {
+    return (
+      <CancelConfirm bookingId={bookingId} lastMinute={confirming.lastMinute} onClose={() => setConfirming(null)} />
+    );
+  }
 
   return (
     <div className="flex gap-2">
@@ -37,7 +51,7 @@ export function VisitActions({ bookingId, who, phone }: { bookingId: string; who
       </Link>
       <button
         type="button"
-        onClick={() => setConfirming(true)}
+        onClick={() => setConfirming({ lastMinute: lastMinuteNow(check) })}
         aria-label="Cancel booking"
         className={cn(pill, "border-danger text-danger hover:bg-danger/5")}
       >

@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { firstFreeDay, slotFree, VisitTimePicker, type VisitChoice } from "@/components/bookings/visit-time-picker";
 import { Button } from "@/components/ui/button";
-import { TIME_SLOTS, TIME_ZONE, visitTime } from "@/lib/bookings";
+import { LAST_MINUTE_MS, TIME_SLOTS, TIME_ZONE, visitTime } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
 
 // Moving a visit to another time, until the technician sets off (see
 // reschedule_booking). Times when the technician is taken can't be picked.
+// Once a technician has a customer's visit, they move it at most twice, to
+// times at least 2 hours away (see the booking limits migration).
 export function ChangeTime({
   bookingId,
   current,
@@ -18,6 +20,8 @@ export function ChangeTime({
   busy,
   now,
   admin = false,
+  movesLeft,
+  blocked = null,
 }: {
   bookingId: string;
   /** The visit time now (ISO). */
@@ -28,21 +32,34 @@ export function ChangeTime({
   busy: string[];
   now: number;
   admin?: boolean;
+  /** A customer's visit a technician has (or was asked for): how many more times they can move it. */
+  movesLeft?: number;
+  /** Why it can't move now, if it can't. */
+  blocked?: string | null;
 }) {
   const router = useRouter();
   const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
+  const lead = movesLeft === undefined ? undefined : LAST_MINUTE_MS;
   const [open, setOpen] = useState(false);
   const [when, setWhen] = useState<VisitChoice>(() => {
     // Start on the visit's own day (in Manila), if another time is free that day.
     const day = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date(current));
     const free = TIME_SLOTS.some(
-      (s) => Date.parse(visitTime(day, s.value)) !== Date.parse(current) && slotFree(day, s.value, now, busyAt),
+      (s) => Date.parse(visitTime(day, s.value)) !== Date.parse(current) && slotFree(day, s.value, now, busyAt, lead),
     );
-    return { day: free ? day : firstFreeDay(now, busyAt), slot: null };
+    return { day: free ? day : firstFreeDay(now, busyAt, lead), slot: null };
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (blocked) {
+    return (
+      <p className="flex gap-3 rounded-card bg-white p-5 text-sm text-muted shadow-sm">
+        <CalendarClock aria-hidden className="size-5 shrink-0 text-brand-navy" />
+        {blocked}
+      </p>
+    );
+  }
   if (!open) {
     return (
       <Button variant="secondary" onClick={() => setOpen(true)}>
@@ -84,6 +101,7 @@ export function ChangeTime({
         now={now}
         busy={busyAt}
         current={current}
+        lead={lead}
         inset="card"
       />
       <p className="text-sm text-muted">
@@ -92,6 +110,9 @@ export function ChangeTime({
           : admin
             ? "The customer is told, and technicians see the new time."
             : "Technicians see the new time."}
+        {movesLeft === 1
+          ? " This is the last time you can change it."
+          : movesLeft !== undefined && " You can change the time twice in all, to a time at least 2 hours away."}
       </p>
       {error && (
         <p role="alert" className="rounded-field bg-danger/5 px-4 py-3 text-sm text-danger">

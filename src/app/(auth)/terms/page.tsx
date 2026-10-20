@@ -57,8 +57,14 @@ export default function TermsPage() {
               off what you pay. It never takes the total below zero.
             </li>
             <li>
-              You can cancel for free until the technician arrives. If no technician takes your request by the visit
-              time, it&apos;s cancelled and we tell you.
+              You can change the visit time from your booking. Once a technician has it, you can change it twice, until
+              2 hours before the visit.
+            </li>
+            <li>
+              You can cancel without a fee until the technician arrives. Cancelling less than 2 hours before the visit,
+              or once the technician is on the way, is a last-minute cancellation (unless the technician is running
+              late). After 3 in 30 days, you can&apos;t book new repairs until 30 days after the first of them. If no
+              technician takes your request by the visit time, it&apos;s cancelled and we tell you.
             </li>
           </ul>
         </LegalSection>
@@ -68,7 +74,9 @@ export default function TermsPage() {
             <li>You can take jobs once PatchUp has approved you. Keep your details and documents up to date.</li>
             <li>
               Take only jobs you can do, keep &quot;Taking new jobs&quot; up to date, and tap &quot;I&apos;m on my
-              way&quot; when you leave. If you can&apos;t make it, give the job back so another technician can take it.
+              way&quot; when you leave. If you can&apos;t make it, give the job back as early as you can, so another
+              technician can take it. Giving one back less than 2 hours before the visit, or once you&apos;re on the
+              way, is a last-minute give-back: PatchUp is told, and it counts on your record.
             </li>
             <li>If you haven&apos;t set off by the visit time, PatchUp may give the job to another technician.</li>
             <li>

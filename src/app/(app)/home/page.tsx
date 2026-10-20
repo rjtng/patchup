@@ -2,6 +2,7 @@ import { Ellipsis, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
+import { BookingPausedNotice, myBookingPause } from "@/components/bookings/booking-paused";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { mySuspension, SuspendedNotice } from "@/components/reports/suspended-notice";
 import { ServiceIcon } from "@/components/services/service-icon";
@@ -48,7 +49,7 @@ export default async function HomePage() {
       </header>
 
       <Suspense>
-        <Suspended />
+        <CantBook />
       </Suspense>
 
       <Suspense>
@@ -84,9 +85,12 @@ export default async function HomePage() {
   );
 }
 
-async function Suspended() {
-  const suspension = await mySuspension(await createClient());
-  return suspension && <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />;
+// Why the customer can't book right now, if they can't.
+async function CantBook() {
+  const supabase = await createClient();
+  const [suspension, pausedUntil] = await Promise.all([mySuspension(supabase), myBookingPause(supabase)]);
+  if (suspension) return <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />;
+  return pausedUntil && <BookingPausedNotice until={pausedUntil} className="mx-6 mt-6" />;
 }
 
 const TILE_ICON = { className: "size-8 text-brand-navy", strokeWidth: 1.75 };
