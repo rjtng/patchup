@@ -50,8 +50,8 @@ async function Dashboard() {
         <Tile
           href="/admin/reports"
           value={openReports}
-          label={openReports === 1 ? "problem reported" : "problems reported"}
-          note="By customers and technicians"
+          label={openReports === 1 ? "reported problem to look into" : "reported problems to look into"}
+          note="From customers and technicians"
           urgent={openReports > 0}
         />
         <Tile
