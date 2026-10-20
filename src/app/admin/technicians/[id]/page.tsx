@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, CalendarClock, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -7,8 +7,9 @@ import { StatusChip } from "@/components/bookings/status-chip";
 import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
-import { formatDay, formatSchedule } from "@/lib/bookings";
+import { formatDay, formatPeso, formatSchedule } from "@/lib/bookings";
 import { DOCUMENT_KINDS, documentLabel, formatSize, withSignedUrls, type DocumentKind } from "@/lib/documents";
+import { jobsLabel, owedByTechnician } from "@/lib/payouts";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
@@ -33,7 +34,7 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }] = await Promise.all([
+  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }] = await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
     supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
     supabase
@@ -47,6 +48,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
       .eq("technician_id", id)
       .order("scheduled_at", { ascending: false })
       .limit(20),
+    supabase.rpc("paybacks", { technician: id }),
   ]);
   const t = rows?.[0];
   if (!t) {
@@ -57,6 +59,8 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
     );
   }
   const name = t.full_name || "This technician";
+  // First-booking offers PatchUp hasn't paid them back yet.
+  const owed = owedByTechnician(paybacks ?? [])[0];
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-2">
@@ -118,6 +122,14 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
             <span className="block text-muted">{t.is_available ? "Taking new jobs now" : "Not taking new jobs now"}</span>
           )}
         </DetailRow>
+        {owed && (
+          <DetailRow icon={Banknote} label="PatchUp owes them">
+            {formatPeso(owed.amount)} for first-booking offers on {jobsLabel(owed.jobs.length)}
+            <Link href="/admin/payouts" className="block w-fit font-semibold text-brand-navy underline">
+              Pay it back
+            </Link>
+          </DetailRow>
+        )}
       </section>
 
       {t.verification_status === "approved" && (

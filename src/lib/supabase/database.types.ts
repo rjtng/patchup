@@ -434,6 +434,81 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_bookings: {
+        Row: {
+          amount: number
+          booking_id: string
+          payout_id: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          payout_id: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          payout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_bookings_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_bookings_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          amount: number
+          id: string
+          paid_at: string
+          paid_by: string | null
+          reference: string
+          technician_id: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          paid_at?: string
+          paid_by?: string | null
+          reference?: string
+          technician_id: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          paid_at?: string
+          paid_by?: string | null
+          reference?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phone_numbers: {
         Row: {
           phone: string
@@ -976,6 +1051,20 @@ export type Database = {
         }
       }
       mark_notifications_read: { Args: never; Returns: undefined }
+      paybacks: {
+        Args: { technician?: string }
+        Returns: {
+          amount: number
+          appliance: string
+          booking_id: string
+          category: string
+          completed_at: string
+          paid_at: string
+          payout_id: string
+          technician_id: string
+          technician_name: string
+        }[]
+      }
       push_forget: { Args: { endpoints: string[] }; Returns: undefined }
       push_public_key: { Args: never; Returns: string }
       push_store_keys: {
@@ -983,6 +1072,23 @@ export type Database = {
         Returns: string
       }
       push_take_delivery: { Args: { notification_id: string }; Returns: Json }
+      record_payout: {
+        Args: { amount: number; reference?: string; technician: string }
+        Returns: {
+          amount: number
+          id: string
+          paid_at: string
+          paid_by: string | null
+          reference: string
+          technician_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payouts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       remove_push_subscription: {
         Args: { endpoint: string }
         Returns: undefined

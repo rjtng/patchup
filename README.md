@@ -57,7 +57,8 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/search`                               | Search services and technicians (from Home's search box) |
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
 | `/profile/addresses/new`, `/profile/addresses/[id]` | Add or edit a saved address, with its map pin |
-| `/admin`, `/admin/technicians`, `/admin/bookings`, `/admin/services` | Admin: overview, approving technicians, assigning and cancelling bookings, the services |
+| `/profile/earnings`                     | Technicians' earnings: what PatchUp owes them, this month, payments |
+| `/admin`, `/admin/technicians`, `/admin/bookings`, `/admin/services`, `/admin/payouts` | Admin: overview, approving technicians, assigning and cancelling bookings, the services, paying technicians back |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
 password reset use Supabase Auth; email links land on `/auth/confirm`. Signed-out visitors are
@@ -84,6 +85,12 @@ screens too) so they can assign someone, the customer hears that the PatchUp tea
 technicians who could take it are reminded, and a request for a technician who hasn't answered
 opens to the others. If nobody has it by the visit time, it's cancelled and the customer is told;
 "Book again" on the booking fills in the form from it, and the first-booking offer still applies.
+
+**Paying technicians back:** a customer's first booking has the offer taken off what they pay, so
+the technician collects that much less; PatchUp pays it back. The technician's job says so, and
+their Earnings (from Profile) show what PatchUp owes them, this month's jobs and cash, and the
+payments from PatchUp. Admins see what's owed under Admin → Payouts (from the overview), send it by
+GCash or bank, and mark it as paid with the reference; the technician is told.
 
 **Reminders and late technicians:** the customer is reminded at 6 PM the evening before the visit
 (who's coming, when and where), and the technician an hour before, with the address. At the visit

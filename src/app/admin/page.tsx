@@ -43,6 +43,16 @@ async function Dashboard() {
           note={o.stale_requests > 0 ? `${o.stale_requests} waiting too long` : undefined}
           urgent={o.stale_requests > 0}
         />
+        <Tile
+          href="/admin/payouts"
+          value={formatPeso(o.payback_owed)}
+          label="to pay technicians back"
+          note={
+            o.payback_technicians > 0
+              ? `First-booking offers, to ${o.payback_technicians === 1 ? "1 technician" : `${o.payback_technicians} technicians`}`
+              : "First-booking offers"
+          }
+        />
       </Group>
 
       <Group title="Right now">
@@ -99,7 +109,7 @@ function Tile({
   urgent = false,
 }: {
   href?: string;
-  value: number;
+  value: number | string;
   label: string;
   note?: string;
   urgent?: boolean;
