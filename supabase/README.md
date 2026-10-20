@@ -235,6 +235,18 @@ name comes first, then those taking jobs, then the best rated. It runs with the 
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
 
+## Scheduling
+
+A technician's jobs under way (accepted until done or cancelled) hold their time: none of
+`accept_booking`, `assign_technician`, `create_booking` (asking for a technician) or
+`reschedule_booking` gives them a job within two hours of another (`private.claim_time`, which also
+locks the technician so two can't take the same time at once). `busy_times(technician,
+except_booking)` lists when an approved technician is taken, for the app to grey those times out.
+`reschedule_booking(booking_id, scheduled_at)` moves a visit, for its customer or an admin, until the
+technician sets off: the timeline notes the old time, the technician (if any) is told, the customer is
+told when an admin moved it, the reminders go again for the new time, and "running late" counts from
+the move.
+
 ## Profile photos and Top technicians
 
 Anyone can add a profile photo: the app uploads a small square JPEG to the private Storage bucket

@@ -7,7 +7,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 
-export type Candidate = { id: string; name: string; city: string; available: boolean; rating: number; reviews: number };
+export type Candidate = {
+  id: string;
+  name: string;
+  city: string;
+  available: boolean;
+  rating: number;
+  reviews: number;
+  /** Has another job within two hours of this visit: can't be given it. */
+  busy: boolean;
+};
 
 /**
  * For a request nobody has taken (or one the chosen technician hasn't
@@ -81,8 +90,12 @@ export function AssignTechnician({
             <label
               key={t.id}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-field border-2 p-3 text-sm transition-colors",
-                chosen === t.id ? "border-brand-navy bg-brand-navy/5" : "border-line hover:border-brand-navy/50",
+                "flex items-center gap-3 rounded-field border-2 p-3 text-sm transition-colors",
+                t.busy
+                  ? "cursor-not-allowed border-line opacity-60"
+                  : chosen === t.id
+                    ? "cursor-pointer border-brand-navy bg-brand-navy/5"
+                    : "cursor-pointer border-line hover:border-brand-navy/50",
               )}
             >
               <input
@@ -90,6 +103,7 @@ export function AssignTechnician({
                 name="technician"
                 value={t.id}
                 checked={chosen === t.id}
+                disabled={t.busy}
                 onChange={() => setChosen(t.id)}
                 className="size-5 accent-brand-navy"
               />
@@ -105,7 +119,8 @@ export function AssignTechnician({
                       {t.rating.toFixed(1)} ·
                     </>
                   )}
-                  {t.city && <>{t.city} ·</>} {t.available ? "Taking jobs" : "Not taking jobs now"}
+                  {t.city && <>{t.city} ·</>}{" "}
+                  {t.busy ? "Has another job then" : t.available ? "Taking jobs" : "Not taking jobs now"}
                 </span>
               </span>
             </label>

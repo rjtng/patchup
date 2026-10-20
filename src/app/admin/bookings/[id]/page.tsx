@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BookingPhotos } from "@/components/bookings/booking-photos";
+import { ChangeTime } from "@/components/bookings/change-time";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { ReceiptLink } from "@/components/bookings/receipt-link";
 import { QuoteItems } from "@/components/bookings/quote-items";
@@ -14,7 +15,18 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { BOOKING_FILTERS, lateAt, takenAt } from "@/lib/admin";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
-import { amountDue, dueParts, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
+import {
+  amountDue,
+  CLASH_WINDOW_MS,
+  dueParts,
+  formatPeso,
+  formatSchedule,
+  fullAddress,
+  isFinished,
+  mapsLink,
+  quoteItems,
+  UNDER_WAY,
+} from "@/lib/bookings";
 import { withSignedUrls } from "@/lib/documents";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
@@ -87,6 +99,25 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const list = BOOKING_FILTERS.find((f) => (f.statuses as readonly string[]).includes(booking.status))?.value ?? "open";
   const due = amountDue(booking);
   const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
+  const movable = booking.status === "requested" || booking.status === "accepted";
+  const visit = Date.parse(booking.scheduled_at);
+  const [{ data: clashing }, { data: busy }] = await Promise.all([
+    // Who could do it but has another job within two hours (they can't be given this one).
+    technicians?.length
+      ? supabase
+          .from("bookings")
+          .select("technician_id")
+          .in("technician_id", technicians.map((t) => t.id))
+          .in("status", UNDER_WAY)
+          .neq("id", booking.id)
+          .gt("scheduled_at", new Date(visit - CLASH_WINDOW_MS).toISOString())
+          .lt("scheduled_at", new Date(visit + CLASH_WINDOW_MS).toISOString())
+      : Promise.resolve({ data: [] }),
+    // Moving the visit: when its technician is taken besides this visit.
+    movable && booking.technician_id
+      ? supabase.rpc("busy_times", { technician: booking.technician_id, except_booking: booking.id })
+      : Promise.resolve({ data: [] }),
+  ]);
   const customerName = booking.customer?.full_name || "The customer";
   const technicianName = booking.technician?.full_name || null;
   // A technician who hasn't set off by now: read once per request, after the data above.
@@ -134,9 +165,13 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
               available: t.is_available,
               rating: Number(t.rating_avg),
               reviews: t.rating_count,
+              busy: Boolean(clashing?.some((c) => c.technician_id === t.id)),
             }))
-            // Those taking jobs first, then the best rated.
-            .sort((a, b) => Number(b.available) - Number(a.available) || b.rating - a.rating)}
+            // Those free then first, then those taking jobs, then the best rated.
+            .sort(
+              (a, b) =>
+                Number(a.busy) - Number(b.busy) || Number(b.available) - Number(a.available) || b.rating - a.rating,
+            )}
         />
       )}
 
@@ -210,6 +245,19 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{booking.reviews.comment}</p>
           )}
         </section>
+      )}
+
+      {movable && (
+        <ChangeTime
+          bookingId={booking.id}
+          current={booking.scheduled_at}
+          technicianName={technicianName}
+          busy={busy ?? []}
+          // Read once per request, after the data above, so the times offered start from now.
+          // eslint-disable-next-line react-hooks/purity
+          now={Date.now()}
+          admin
+        />
       )}
 
       <BookingTimeline events={booking.booking_events} />

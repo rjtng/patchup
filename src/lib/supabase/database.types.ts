@@ -945,6 +945,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      busy_times: {
+        Args: { except_booking?: string; technician: string }
+        Returns: string[]
+      }
       cancel_booking: {
         Args: { booking_id: string; reason?: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
@@ -1023,6 +1027,16 @@ export type Database = {
       mark_chat_read: { Args: { booking_id: string }; Returns: undefined }
       mark_en_route: {
         Args: { booking_id: string }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reschedule_booking: {
+        Args: { booking_id: string; scheduled_at: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
         SetofOptions: {
           from: "*"

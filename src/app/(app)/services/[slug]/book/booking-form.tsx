@@ -6,8 +6,15 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
+import {
+  firstFreeDay,
+  radioChip as chip,
+  slotFree,
+  VisitTimePicker,
+  type VisitChoice,
+} from "@/components/bookings/visit-time-picker";
 import { addBookingPhotos, MAX_PHOTOS, shrinkPhoto } from "@/lib/booking-photos";
-import { formatPeso, isSlotOpen, TIME_SLOTS, upcomingDays, visitTime } from "@/lib/bookings";
+import { formatPeso, visitTime } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import type { Point } from "@/lib/tracking";
@@ -35,14 +42,6 @@ function bookingErrorMessage(error: PostgrestError) {
   return "We couldn't book that. Check your connection and try again.";
 }
 
-// A radio button styled as a chip. `relative` keeps the hidden input inside the
-// chip, so the scrolling row of days can't widen the page.
-const chip = (selected: boolean) =>
-  cn(
-    "relative rounded-field border-2 px-3 py-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-brand-yellow has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-40",
-    selected ? "border-brand-navy bg-brand-navy text-white" : "cursor-pointer border-line bg-white text-ink hover:border-brand-navy/40",
-  );
-
 export function BookingForm({
   category,
   technician,
@@ -50,6 +49,7 @@ export function BookingForm({
   addresses: initialAddresses,
   discount,
   initial,
+  busy,
   now,
 }: {
   category: { id: string; name: string; inspection_fee: number };
@@ -60,12 +60,13 @@ export function BookingForm({
   discount: number;
   /** Booking again: what they wrote last time, and the saved address it was at. */
   initial?: { appliance: string; brand: string; problem: string; addressId?: string } | null;
+  /** When the chosen technician is taken (their jobs' times, ISO): those times can't be picked. */
+  busy: string[];
   now: number;
 }) {
   const router = useRouter();
-  const days = upcomingDays(now);
-  const [day, setDay] = useState(() => days.find((d) => d.open)?.value ?? days[0].value);
-  const [slot, setSlot] = useState<string | null>(null);
+  const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
+  const [when, setWhen] = useState<VisitChoice>(() => ({ day: firstFreeDay(now, busyAt), slot: null }));
   const [addresses, setAddresses] = useState(initialAddresses);
   const [addressChoice, setAddressChoice] = useState(initial?.addressId ?? initialAddresses[0]?.id ?? NEW_ADDRESS);
   const [newPin, setNewPin] = useState<Point | null>(null); // for a new address
@@ -106,7 +107,7 @@ export function BookingForm({
     const next: typeof errors = {};
     if (!appliance) next.appliance = "Say what needs fixing.";
     if (!problem) next.problem = "Describe the problem so the technician comes prepared.";
-    if (!slot || !isSlotOpen(day, slot, Date.now())) next.when = "Pick a visit time.";
+    if (!when.slot || !slotFree(when.day, when.slot, Date.now(), busyAt)) next.when = "Pick a visit time.";
     if (newAddress) {
       if (!newAddress.street) next.street = "Enter the house number and street.";
       if (!newAddress.barangay) next.barangay = "Enter the barangay.";
@@ -114,7 +115,7 @@ export function BookingForm({
       if (!newAddress.province) next.province = "Enter the province.";
     }
     setErrors(next);
-    if (Object.keys(next).length > 0 || !slot) return;
+    if (Object.keys(next).length > 0 || !when.slot) return;
     setPending(true);
 
     const supabase = createClient();
@@ -138,7 +139,7 @@ export function BookingForm({
       appliance,
       brand: get("brand"),
       problem,
-      scheduled_at: visitTime(day, slot),
+      scheduled_at: visitTime(when.day, when.slot),
       ...(technician && { technician_id: technician.id }),
     });
     if (error) {
@@ -228,47 +229,14 @@ export function BookingForm({
         </div>
       </section>
 
-      <fieldset className="flex min-w-0 flex-col gap-3">
-        <legend className="mb-3 text-lg font-bold text-ink">When should the technician come?</legend>
-        <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1">
-          {days.map((d) => (
-            <label key={d.value} className={cn(chip(day === d.value), "flex min-w-16 shrink-0 flex-col")}>
-              <input
-                type="radio"
-                name="day"
-                value={d.value}
-                aria-label={d.spoken}
-                checked={day === d.value}
-                disabled={!d.open}
-                onChange={() => {
-                  setDay(d.value);
-                  if (slot && !isSlotOpen(d.value, slot, now)) setSlot(null);
-                }}
-                className="sr-only"
-              />
-              <span className={cn("text-xs font-medium", day === d.value ? "text-white/80" : "text-muted")}>{d.month}</span>
-              {d.label}
-            </label>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {TIME_SLOTS.map((s) => (
-            <label key={s.value} className={chip(slot === s.value)}>
-              <input
-                type="radio"
-                name="slot"
-                value={s.value}
-                checked={slot === s.value}
-                disabled={!isSlotOpen(day, s.value, now)}
-                onChange={() => setSlot(s.value)}
-                className="sr-only"
-              />
-              {s.label}
-            </label>
-          ))}
-        </div>
-        {errors.when && <p className="text-sm text-danger">{errors.when}</p>}
-      </fieldset>
+      <VisitTimePicker
+        legend="When should the technician come?"
+        value={when}
+        onChange={setWhen}
+        now={now}
+        busy={busyAt}
+        error={errors.when}
+      />
 
       <fieldset className="flex min-w-0 flex-col gap-3">
         <legend className="mb-3 text-lg font-bold text-ink">Where?</legend>

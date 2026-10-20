@@ -9,6 +9,7 @@ import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { CancelBooking } from "@/components/bookings/cancel-booking";
+import { ChangeTime } from "@/components/bookings/change-time";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,6 +22,7 @@ import { CardsSkeleton } from "@/components/ui/skeleton";
 import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
+  CAN_RESCHEDULE,
   CUSTOMER_CAN_CANCEL,
   dueParts,
   formatDay,
@@ -110,6 +112,13 @@ async function BookingDetails({
   // Booking again: whether the first-booking offer still applies (cancelled bookings don't use it up).
   const offer =
     isCustomer && booking.status === "cancelled" ? ((await supabase.rpc("first_booking_discount")).data ?? 0) : 0;
+  // Moving the visit: when the technician (if any) is taken besides this visit.
+  const canReschedule = isCustomer && CAN_RESCHEDULE.includes(booking.status);
+  const busy =
+    canReschedule && booking.technician_id
+      ? ((await supabase.rpc("busy_times", { technician: booking.technician_id, except_booking: booking.id })).data ??
+        [])
+      : [];
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -261,6 +270,18 @@ async function BookingDetails({
           </DetailRow>
         )}
       </section>
+
+      {canReschedule && (
+        <ChangeTime
+          bookingId={booking.id}
+          current={booking.scheduled_at}
+          technicianName={technicianName}
+          busy={busy}
+          // Read once per request, after the data above, so the times offered start from now.
+          // eslint-disable-next-line react-hooks/purity
+          now={Date.now()}
+        />
+      )}
 
       {isCustomer && booking.technician_id && booking.status !== "cancelled" && (
         <ContactButtons bookingId={booking.id} name={technicianName} phone={phone} fallback="your technician" />

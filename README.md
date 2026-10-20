@@ -103,6 +103,13 @@ their Earnings (from Profile) show what PatchUp owes them, this month's jobs and
 payments from PatchUp. Admins see what's owed under Admin → Payouts (from the overview), send it by
 GCash or bank, and mark it as paid with the reference; the technician is told.
 
+**No double bookings, and moving a visit:** a technician's jobs under way hold their time, so
+nobody can give them another within two hours of one: they can't accept it (their Jobs list marks
+such requests), admins can't assign it (the list says who has another job then), and customers asking
+for them see those times as taken. Until the technician sets off, the customer (or an admin) can
+change the visit time from the booking; the technician is told, and the reminders go again for the
+new time.
+
 **Photos and Top technicians:** anyone can add a profile photo from Profile (the app makes it a
 small square JPEG); technicians' show on their profile, in search, when picking a technician and on
 the customer's Track card, and a customer's own on Home. Home lists Top technicians: approved
