@@ -36,6 +36,18 @@ export function formatDay(iso: string) {
   );
 }
 
+/** "Oct 18, 2026, 3:15 PM" */
+export function formatDateTime(iso: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: TIME_ZONE,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 export const STATUS: Record<BookingStatus, { label: string; tone: "waiting" | "active" | "done" | "cancelled" }> = {
   requested: { label: "Finding a technician", tone: "waiting" },
   accepted: { label: "Technician confirmed", tone: "active" },

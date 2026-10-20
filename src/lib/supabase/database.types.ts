@@ -618,6 +618,32 @@ export type Database = {
           },
         ]
       }
+      receipts: {
+        Row: {
+          booking_id: string
+          issued_at: string
+          number: number
+        }
+        Insert: {
+          booking_id: string
+          issued_at?: string
+          number?: never
+        }
+        Update: {
+          booking_id?: string
+          issued_at?: string
+          number?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string

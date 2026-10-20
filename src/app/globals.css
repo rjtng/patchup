@@ -72,6 +72,14 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Printed pages (receipts) on plain paper. */
+@media print {
+  html,
+  body {
+    background: white;
+  }
+}
+
 :focus-visible {
   outline: 3px solid var(--color-brand-yellow);
   outline-offset: 2px;

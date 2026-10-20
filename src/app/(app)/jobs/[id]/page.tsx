@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { DetailRow } from "@/components/bookings/detail-row";
+import { ReceiptLink } from "@/components/bookings/receipt-link";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
@@ -59,7 +60,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at)",
+      "id, status, customer_id, technician_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -161,6 +162,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
               PatchUp pays you back the {formatPeso(payback)} first-booking offer (see Profile → Earnings).
             </span>
           )}
+          {mine && job.receipts && <ReceiptLink bookingId={job.id} number={job.receipts.number} />}
         </DetailRow>
       </section>
 
