@@ -37,6 +37,8 @@ supabase/
 | `messages`            | Chat between the customer and the technician                                 |
 | `chat_reads`          | How far each person has read each chat                                       |
 | `technician_locations` | Where a technician on the way is now (only during the trip)                 |
+| `receipts`            | One per completed booking: its receipt number (in order) and when it was issued |
+| `payouts`, `payout_bookings` | What PatchUp paid each technician back, and for which jobs           |
 | `reviews`             | One star rating per completed booking                                         |
 | `notifications`       | What each person has been told (the bell and Notifications), read or not      |
 | `push_subscriptions`  | Devices that agreed to show phone notifications, and whose they are           |
@@ -253,6 +255,16 @@ offer; bookings already made keep the discount they were made with. Only admins 
 Home shows the offer only to customers who haven't booked.
 
 The technician collects the discounted amount in cash, so PatchUp pays them back (see "Payouts").
+
+## Receipts
+
+Each completed booking gets a row in `receipts` with the next `number` (an identity, so numbers are
+only ever given in order) the moment it's marked done (`private.issue_receipt`, a trigger on
+`bookings`; bookings added already done get one too). Jobs done before receipts existed were
+numbered in the order they were done. Whoever can see the booking (its customer, its technician,
+admins) can read its receipt; nobody can add, change or remove one, and a booking with a receipt
+can't be deleted. What the receipt lists comes from the booking: the inspection fee, the approved
+quotes' items, and the first-booking offer as it was taken off, adding up to `final_amount`.
 
 ## Payouts
 

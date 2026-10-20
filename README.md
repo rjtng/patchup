@@ -52,6 +52,7 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/services/[slug]/book`                 | Booking form: the problem, visit time, address       |
 | `/bookings/[id]`                        | A booking: status, details, quote to approve, timeline, cancel |
 | `/jobs/[id]`                            | A job: accept, on the way, arrived, quote, finish    |
+| `/receipts/[id]`                        | A done job's receipt (customer, technician, admins), to print or save as a PDF |
 | `/track`                                | Customers' coming visits, with a live map while the technician is on the way |
 | `/chat/[id]`                            | A booking's chat between the customer and the technician |
 | `/search`                               | Search services and technicians (from Home's search box) |
@@ -101,6 +102,12 @@ the technician collects that much less; PatchUp pays it back. The technician's j
 their Earnings (from Profile) show what PatchUp owes them, this month's jobs and cash, and the
 payments from PatchUp. Admins see what's owed under Admin → Payouts (from the overview), send it by
 GCash or bank, and mark it as paid with the reference; the technician is told.
+
+**Receipts:** when the technician marks a job done, it gets a numbered receipt (PU-000001, in
+order) listing the inspection fee, each approved repair item and the first-booking offer, adding up
+to what was paid in cash. The customer opens it from the booking, the technician from the job and
+admins from the admin booking page; it prints (or saves as a PDF) on its own. It's PatchUp's record
+of the job, not a BIR official receipt.
 
 **Reminders and late technicians:** the customer is reminded at 6 PM the evening before the visit
 (who's coming, when and where), and the technician an hour before, with the address. At the visit

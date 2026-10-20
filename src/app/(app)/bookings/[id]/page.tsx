@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
+import { ReceiptLink } from "@/components/bookings/receipt-link";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingPhotos } from "@/components/bookings/booking-photos";
@@ -69,7 +70,7 @@ async function BookingDetails({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at), receipts(number)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -239,6 +240,7 @@ async function BookingDetails({
           <DetailRow icon={Wrench} label="Total paid">
             {formatPeso(booking.final_amount)}
             {due.discount > 0 && <span className="block text-muted">{dueParts(due)}</span>}
+            {booking.receipts && <ReceiptLink bookingId={booking.id} number={booking.receipts.number} />}
           </DetailRow>
         ) : due.repair > 0 ? (
           <DetailRow icon={Wrench} label="To pay when it's done">
