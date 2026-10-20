@@ -15,6 +15,7 @@ import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
+import { ReportProblem } from "@/components/reports/report-problem";
 import { Stars } from "@/components/reviews/stars";
 import { TripTracker } from "@/components/tracking/trip-tracker";
 import { ButtonLink } from "@/components/ui/button";
@@ -72,12 +73,13 @@ async function BookingDetails({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at), receipts(number)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
     .order("created_at", { referencedTable: "booking_photos" })
+    .order("created_at", { referencedTable: "reports" })
     .maybeSingle();
   if (!booking) notFound();
   const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
@@ -183,7 +185,11 @@ async function BookingDetails({
           {booking.reviews.comment && (
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{booking.reviews.comment}</p>
           )}
-          <p className="text-xs text-muted">{formatDay(booking.reviews.created_at)}. Thanks for helping others choose!</p>
+          <p className="text-xs text-muted">
+            {booking.reviews.hidden_at
+              ? "PatchUp hid this review because it broke our rules for reviews, so others don't see it."
+              : `${formatDay(booking.reviews.created_at)}. Thanks for helping others choose!`}
+          </p>
         </section>
       )}
 
@@ -295,6 +301,8 @@ async function BookingDetails({
       )}
 
       <BookingTimeline events={booking.booking_events} />
+
+      {isCustomer && <ReportProblem bookingId={booking.id} technician={false} reports={booking.reports} />}
 
       {isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status) && <CancelBooking bookingId={booking.id} />}
     </div>

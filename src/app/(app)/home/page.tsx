@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { mySuspension, SuspendedNotice } from "@/components/reports/suspended-notice";
 import { ServiceIcon } from "@/components/services/service-icon";
 import { getServiceCategories } from "@/lib/services";
+import { createClient } from "@/lib/supabase/server";
 import { FirstBookingOffer } from "./first-booking-offer";
 import { Greeting } from "./greeting";
 import { MyPhoto, MyPhotoPlaceholder } from "./my-photo";
@@ -46,6 +48,10 @@ export default async function HomePage() {
       </header>
 
       <Suspense>
+        <Suspended />
+      </Suspense>
+
+      <Suspense>
         <FirstBookingOffer />
       </Suspense>
 
@@ -76,6 +82,11 @@ export default async function HomePage() {
       </Suspense>
     </main>
   );
+}
+
+async function Suspended() {
+  const suspension = await mySuspension(await createClient());
+  return suspension && <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />;
 }
 
 const TILE_ICON = { className: "size-8 text-brand-navy", strokeWidth: 1.75 };

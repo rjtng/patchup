@@ -47,7 +47,10 @@ export default function PrivacyPage() {
               jobs; your government ID, NBI clearance and certificates; your location while you&apos;re on the way to a
               job; your jobs, quotes and the cash you collect; and PatchUp&apos;s payments to you, with their reference.
             </li>
-            <li>The messages a customer and their technician send each other.</li>
+            <li>
+              The messages a customer and their technician send each other, and the problems you report to PatchUp with
+              a booking.
+            </li>
             <li>
               The notifications we send you and, if you turn on phone notifications, the address your browser gives us
               to reach your phone.
@@ -94,7 +97,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>PatchUp&apos;s admins:</strong> what they need to run PatchUp, including technicians&apos;
-              documents and everyone&apos;s email address.
+              documents and everyone&apos;s email address. When looking into a problem someone reported, they read the
+              booking&apos;s messages. Only they see the problems you report, not the other side of the booking.
             </li>
             <li>
               <strong>Our service providers</strong>, who handle information for us: Supabase (database, sign-in and
@@ -116,7 +120,8 @@ export default function PrivacyPage() {
             When you delete your account (Profile, then Delete my account), we delete your name, email, password, mobile
             number, saved addresses, profile photo and other photos, documents, the messages you sent and your
             notifications. We keep finished and cancelled bookings, quotes, payments and star ratings, without anything
-            that identifies you, for our records and for the other side&apos;s history.
+            that identifies you, for our records and for the other side&apos;s history, and the problems reported with
+            your bookings, to keep PatchUp safe.
           </p>
         </LegalSection>
 

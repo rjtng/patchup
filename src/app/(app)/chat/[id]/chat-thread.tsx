@@ -6,7 +6,7 @@ import { CHAT_READ_EVENT, formatMessageDay, formatMessageTime, messageDay } from
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 
-type Message = { id: string; body: string; created_at: string; sender_id: string };
+type Message = { id: string; body: string; created_at: string; sender_id: string; removed_at?: string | null };
 type Sending = { key: number; body: string; failed: boolean };
 
 /**
@@ -113,6 +113,7 @@ export function ChatThread({
                 who={mine ? "You" : m.sender_id === otherId ? otherFirstName : "Earlier technician"}
                 showWho={!mine && m.sender_id !== otherId}
                 body={m.body}
+                removed={Boolean(m.removed_at)}
                 note={formatMessageTime(m.created_at)}
               />
             </Fragment>
@@ -179,12 +180,15 @@ function Bubble({
   who,
   showWho = false,
   body,
+  removed = false,
   note,
 }: {
   mine: boolean;
   who: string;
   showWho?: boolean;
   body: string;
+  /** Removed by PatchUp (see set_message_removed): its text says so. */
+  removed?: boolean;
   note: ReactNode;
 }) {
   return (
@@ -193,7 +197,11 @@ function Bubble({
       <p
         className={cn(
           "whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-base leading-snug",
-          mine ? "rounded-br-sm bg-brand-navy text-white" : "rounded-bl-sm bg-white text-ink shadow-sm",
+          removed
+            ? "border-2 border-dashed border-line italic text-muted"
+            : mine
+              ? "rounded-br-sm bg-brand-navy text-white"
+              : "rounded-bl-sm bg-white text-ink shadow-sm",
         )}
       >
         {!showWho && <span className="sr-only">{who}: </span>}

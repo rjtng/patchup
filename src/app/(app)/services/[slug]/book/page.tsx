@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { mySuspension, SuspendedNotice } from "@/components/reports/suspended-notice";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { getCategory } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
@@ -44,35 +45,52 @@ async function BookingFormLoader({
   const previousId = typeof again === "string" && UUID.test(again) ? again : null;
 
   const supabase = await createClient();
-  const [{ data: category }, { data: addresses }, technician, { data: discount }, { data: previous }, { data: busy }] =
-    await Promise.all([
-      // Read fresh here (not from the cached list), so the fee shown is the one charged.
-      supabase
-        .from("service_categories")
-        .select("id, name, inspection_fee")
-        .eq("slug", slug)
-        .eq("is_active", true)
-        .maybeSingle(),
-      supabase
-        .from("addresses")
-        .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
-        .order("created_at"),
-      technicianId
-        ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
-        : Promise.resolve({ data: null }),
-      // What the first-booking offer takes off, if this is their first (booking works it out again).
-      supabase.rpc("first_booking_discount"),
-      previousId
-        ? supabase
-            .from("bookings")
-            .select("appliance, brand, problem, street, barangay, city, province")
-            .eq("id", previousId)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      // When the technician asked for is taken (booking holds to it too).
-      technicianId ? supabase.rpc("busy_times", { technician: technicianId }) : Promise.resolve({ data: [] }),
-    ]);
+  const [
+    { data: category },
+    { data: addresses },
+    technician,
+    { data: discount },
+    { data: previous },
+    { data: busy },
+    suspension,
+  ] = await Promise.all([
+    // Read fresh here (not from the cached list), so the fee shown is the one charged.
+    supabase
+      .from("service_categories")
+      .select("id, name, inspection_fee")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("addresses")
+      .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
+      .order("created_at"),
+    technicianId
+      ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    // What the first-booking offer takes off, if this is their first (booking works it out again).
+    supabase.rpc("first_booking_discount"),
+    previousId
+      ? supabase
+          .from("bookings")
+          .select("appliance, brand, problem, street, barangay, city, province")
+          .eq("id", previousId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // When the technician asked for is taken (booking holds to it too).
+    technicianId ? supabase.rpc("busy_times", { technician: technicianId }) : Promise.resolve({ data: [] }),
+    // A suspended customer can't book (create_booking refuses them too).
+    mySuspension(supabase),
+  ]);
   if (!category) notFound();
+  if (suspension) {
+    return (
+      <>
+        <PageHeader title={`Book ${category.name.toLowerCase()}`} backHref={`/services/${slug}`} />
+        <SuspendedNotice reason={suspension.reason} className="mx-6 mt-6" />
+      </>
+    );
+  }
   // The saved address it was at, if it's still saved.
   const previousAddress = previous
     ? addresses?.find(
