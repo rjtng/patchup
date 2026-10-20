@@ -40,7 +40,7 @@ async function Dashboard() {
           href="/admin/bookings?show=open"
           value={o.unassigned_requests}
           label={o.unassigned_requests === 1 ? "request nobody has taken" : "requests nobody has taken"}
-          note={o.stale_requests > 0 ? `${o.stale_requests} waiting over an hour` : undefined}
+          note={o.stale_requests > 0 ? `${o.stale_requests} waiting too long` : undefined}
           urgent={o.stale_requests > 0}
         />
       </Group>

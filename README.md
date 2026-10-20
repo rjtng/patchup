@@ -72,7 +72,18 @@ change to the app (see "Services" in `supabase/README.md`).
 customer picks one or sends the request to whoever is available, describes the problem, picks a
 visit time (in Manila time) and a saved or new address. Bookings are listed under the Bookings tab,
 and each has its own page with a timeline and a Cancel button. When the technician sends a
-quote, the customer approves or declines it there.
+quote, the customer approves or declines it there. Customers can add up to three photos of the problem when they book (or later, until the job is
+done); they're made small on the phone before sending, and technicians see them on the job, even
+before accepting it. A customer's first booking has the welcome offer
+(₱100 to start) taken off what they pay after the visit: Home shows it until they book, and the
+booking form, the booking, the quote and the technician's job all show the amount to pay with it.
+
+**Requests nobody takes** are followed up every 5 minutes. After 30 minutes without a technician
+(sooner when the visit is under 2 hours away), admins are notified (the bell is on the admin
+screens too) so they can assign someone, the customer hears that the PatchUp team is helping, the
+technicians who could take it are reminded, and a request for a technician who hasn't answered
+opens to the others. If nobody has it by the visit time, it's cancelled and the customer is told;
+"Book again" on the booking fills in the form from it, and the first-booking offer still applies.
 
 **Search:** Home's search box opens Search, where results follow as you type. A search can name a
 service or describe the problem, in English or Tagalog ("aircon", "leaking faucet", "tubero",
@@ -131,7 +142,7 @@ tab also has phone notifications and Log out.
 
 **Admin:** the people who run PatchUp (see "Make yourself an admin" in `supabase/README.md`) get an
 Admin link on Profile. The overview counts what needs them (technicians to check, requests nobody
-has taken, those waiting over an hour) and the last 7 days. Under Technicians they see who has
+has taken, those waiting too long) and the last 7 days. Under Technicians they see who has
 sent their documents, and for each technician the documents themselves (photos shown, PDFs
 linked), their sign-up email, services and jobs; then they approve, turn down, suspend or
 reinstate them (the technician is told). Admins are notified when a technician sends a document. Under Bookings they give a request to an approved technician, or cancel

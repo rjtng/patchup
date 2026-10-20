@@ -72,6 +72,9 @@ export const EVENT_LABELS: Record<string, string> = {
   quote_declined: "Quote declined",
   completed: "Job completed",
   cancelled: "Booking cancelled",
+  // From the follow-up on requests nobody takes (see the unanswered requests migration).
+  overdue: "Taking longer than usual; the PatchUp team is helping",
+  expired: "Cancelled: no technician was free",
 };
 
 // From accepted until done: while a job is under way, its customer and
@@ -97,10 +100,30 @@ export function quoteItems(items: Json): QuoteItem[] {
   );
 }
 
-/** What the customer pays in cash: the inspection fee plus the approved repair, as complete_booking works it out. */
-export function amountDue(booking: { inspection_fee: number; quotes: { status: string; total: number }[] }) {
+/**
+ * What the customer pays in cash: the inspection fee plus the approved repair,
+ * less the booking's discount (the first-booking offer), as complete_booking
+ * works it out.
+ */
+export function amountDue(booking: {
+  inspection_fee: number;
+  discount: number;
+  quotes: { status: string; total: number }[];
+}) {
   const repair = booking.quotes.filter((q) => q.status === "approved").reduce((sum, q) => sum + q.total, 0);
-  return { inspection: booking.inspection_fee, repair, total: booking.inspection_fee + repair };
+  const { inspection_fee: inspection, discount } = booking;
+  return { inspection, repair, discount, total: payable(inspection + repair, discount) };
+}
+
+/** What's left to pay after a discount (never below zero). */
+export const payable = (amount: number, discount: number) => Math.max(amount - discount, 0);
+
+/** How a total is made up: "₱300 inspection + ₱500 repair − ₱100 first-booking offer". */
+export function dueParts({ inspection, repair, discount }: { inspection: number; repair: number; discount: number }) {
+  let parts = `${formatPeso(inspection)} inspection`;
+  if (repair > 0) parts += ` + ${formatPeso(repair)} repair`;
+  if (discount > 0) parts += ` − ${formatPeso(discount)} first-booking offer`;
+  return parts;
 }
 
 // --- Addresses ------------------------------------------------------------------

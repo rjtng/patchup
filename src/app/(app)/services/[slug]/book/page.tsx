@@ -7,6 +7,8 @@ import { getCategory } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { BookingForm } from "./booking-form";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function generateMetadata({ params }: PageProps<"/services/[slug]/book">): Promise<Metadata> {
   const { slug } = await params;
   return { title: `Book ${(await getCategory(slug))?.name.toLowerCase() ?? "a repair"}` };
@@ -36,27 +38,49 @@ async function BookingFormLoader({
   params: PageProps<"/services/[slug]/book">["params"];
   searchParams: PageProps<"/services/[slug]/book">["searchParams"];
 }) {
-  const [{ slug }, { technician: technicianParam }] = await Promise.all([params, searchParams]);
+  const [{ slug }, { technician: technicianParam, again }] = await Promise.all([params, searchParams]);
   const technicianId = typeof technicianParam === "string" ? technicianParam : null;
+  // "Book again" from a cancelled booking: start from what they wrote then.
+  const previousId = typeof again === "string" && UUID.test(again) ? again : null;
 
   const supabase = await createClient();
-  const [{ data: category }, { data: addresses }, technician] = await Promise.all([
-    // Read fresh here (not from the cached list), so the fee shown is the one charged.
-    supabase
-      .from("service_categories")
-      .select("id, name, inspection_fee")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle(),
-    supabase
-      .from("addresses")
-      .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
-      .order("created_at"),
-    technicianId
-      ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: category }, { data: addresses }, technician, { data: discount }, { data: previous }] =
+    await Promise.all([
+      // Read fresh here (not from the cached list), so the fee shown is the one charged.
+      supabase
+        .from("service_categories")
+        .select("id, name, inspection_fee")
+        .eq("slug", slug)
+        .eq("is_active", true)
+        .maybeSingle(),
+      supabase
+        .from("addresses")
+        .select("id, label, street, barangay, city, province, landmark, latitude, longitude")
+        .order("created_at"),
+      technicianId
+        ? supabase.from("profiles").select("id, full_name").eq("id", technicianId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // What the first-booking offer takes off, if this is their first (booking works it out again).
+      supabase.rpc("first_booking_discount"),
+      previousId
+        ? supabase
+            .from("bookings")
+            .select("appliance, brand, problem, street, barangay, city, province")
+            .eq("id", previousId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
   if (!category) notFound();
+  // The saved address it was at, if it's still saved.
+  const previousAddress = previous
+    ? addresses?.find(
+        (a) =>
+          a.street === previous.street &&
+          a.barangay === previous.barangay &&
+          a.city === previous.city &&
+          a.province === previous.province,
+      )
+    : undefined;
 
   return (
     <>
@@ -66,6 +90,15 @@ async function BookingFormLoader({
         technician={technician.data}
         technicianMissing={Boolean(technicianId) && !technician.data}
         addresses={addresses ?? []}
+        discount={discount ?? 0}
+        initial={
+          previous && {
+            appliance: previous.appliance,
+            brand: previous.brand,
+            problem: previous.problem,
+            addressId: previousAddress?.id,
+          }
+        }
         // Read once per request (this server component runs after the cookies
         // above, so it never re-renders), so the visit times offered start from now.
         // eslint-disable-next-line react-hooks/purity

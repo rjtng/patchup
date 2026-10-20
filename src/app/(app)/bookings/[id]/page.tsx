@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,10 +14,13 @@ import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
 import { Stars } from "@/components/reviews/stars";
 import { TripTracker } from "@/components/tracking/trip-tracker";
+import { ButtonLink } from "@/components/ui/button";
 import { CardsSkeleton } from "@/components/ui/skeleton";
+import { PHOTO_BUCKET } from "@/lib/booking-photos";
 import {
   amountDue,
   CUSTOMER_CAN_CANCEL,
+  dueParts,
   formatDay,
   formatPeso,
   formatSchedule,
@@ -25,6 +29,7 @@ import {
   quoteItems,
   UNDER_WAY,
 } from "@/lib/bookings";
+import { withSignedUrls } from "@/lib/documents";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
@@ -34,12 +39,12 @@ import { RateRepair } from "./rate-repair";
 
 export const metadata: Metadata = { title: "Booking" };
 
-export default function BookingPage({ params }: PageProps<"/bookings/[id]">) {
+export default function BookingPage({ params, searchParams }: PageProps<"/bookings/[id]">) {
   return (
     <main className="pb-6">
       <PageHeader title="Booking" backHref="/bookings" />
       <Suspense fallback={<CardsSkeleton count={4} />}>
-        <BookingDetails params={params} />
+        <BookingDetails params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
@@ -51,20 +56,28 @@ const QUOTE_STATUS = {
   declined: { label: "Declined", className: "bg-danger/10 text-danger" },
 };
 
-async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">["params"] }) {
-  const { id } = await params;
+async function BookingDetails({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/bookings/[id]">["params"];
+  searchParams: PageProps<"/bookings/[id]">["searchParams"];
+}) {
+  const [{ id }, { photos: photosParam }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, final_amount, cancel_reason, service_categories(name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at)",
+      "id, status, customer_id, technician_id, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
+    .order("created_at", { referencedTable: "booking_photos" })
     .maybeSingle();
   if (!booking) notFound();
+  const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
 
   const isCustomer = booking.customer_id === auth?.claims.sub;
   // Where the technician is, while they're on the way (see TripTracker).
@@ -86,6 +99,13 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
           ?.phone ?? null)
       : null;
   const due = amountDue(booking);
+  // The follow-up on requests nobody takes: it told admins (still waiting), or cancelled it at the visit time.
+  const waitingSteps = booking.booking_events.filter((e) => ["created", "declined", "overdue"].includes(e.event));
+  const teamHelping = booking.status === "requested" && waitingSteps.at(-1)?.event === "overdue";
+  const expired = booking.booking_events.some((e) => e.event === "expired");
+  // Booking again: whether the first-booking offer still applies (cancelled bookings don't use it up).
+  const offer =
+    isCustomer && booking.status === "cancelled" ? ((await supabase.rpc("first_booking_discount")).data ?? 0) : 0;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -98,6 +118,38 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      {isCustomer && booking.status === "cancelled" && booking.service_categories && (
+        <section aria-labelledby="book-again" className="rounded-card bg-white p-5 shadow-sm">
+          <h2 id="book-again" className="text-base font-bold text-ink">
+            {expired ? "No technician was free for this time" : "This booking was cancelled"}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {expired
+              ? "Sorry about that. Book again and pick another time."
+              : booking.cancel_reason
+                ? `Reason: ${booking.cancel_reason}`
+                : "Book again whenever you're ready."}
+            {offer > 0 && ` Your first-booking offer still applies: ${formatPeso(offer)} off.`}
+          </p>
+          <ButtonLink href={`/services/${booking.service_categories.slug}/book?again=${booking.id}`} className="mt-4">
+            Book again
+          </ButtonLink>
+        </section>
+      )}
+
+      <BookingPhotos
+        bookingId={booking.id}
+        photos={photos}
+        editable={isCustomer && !isFinished(booking.status)}
+        intro={
+          photosParam === "failed"
+            ? "Some photos didn't upload. Add them again here."
+            : isCustomer && !isFinished(booking.status)
+              ? "Up to 3 photos of the problem, so the technician sees it before coming."
+              : undefined
+        }
+      />
 
       {isCustomer && booking.status === "en_route" && (
         <TripTracker
@@ -138,7 +190,12 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
             <QuoteItems items={quoteItems(quote.items)} total={quote.total} />
             {quote.note && <p className="mt-3 whitespace-pre-line text-sm text-muted">{quote.note}</p>}
             {isCustomer && quote.status === "pending" && booking.status === "quoted" && (
-              <QuoteResponse quoteId={quote.id} repair={quote.total} inspectionFee={booking.inspection_fee} />
+              <QuoteResponse
+                quoteId={quote.id}
+                repair={quote.total}
+                inspectionFee={booking.inspection_fee}
+                discount={booking.discount}
+              />
             )}
           </section>
         ))}
@@ -159,19 +216,32 @@ async function BookingDetails({ params }: { params: PageProps<"/bookings/[id]">[
             >
               {technicianName ?? "Your technician"}
             </Link>
+          ) : booking.status === "cancelled" ? (
+            "None"
           ) : (
-            "Finding one for you"
+            <>
+              Finding one for you
+              {teamHelping && (
+                <span className="block text-muted">It&apos;s taking longer than usual, so the PatchUp team is helping.</span>
+              )}
+            </>
           )}
         </DetailRow>
-        {booking.final_amount != null ? (
+        {booking.status === "cancelled" ? null : booking.final_amount != null ? (
           <DetailRow icon={Wrench} label="Total paid">
             {formatPeso(booking.final_amount)}
+            {due.discount > 0 && <span className="block text-muted">{dueParts(due)}</span>}
           </DetailRow>
         ) : due.repair > 0 ? (
           <DetailRow icon={Wrench} label="To pay when it's done">
             {formatPeso(due.total)}
+            <span className="block text-muted">{dueParts(due)}, in cash</span>
+          </DetailRow>
+        ) : due.discount > 0 ? (
+          <DetailRow icon={Wrench} label="To pay after the visit">
+            {formatPeso(due.total)}
             <span className="block text-muted">
-              {formatPeso(due.inspection)} inspection + {formatPeso(due.repair)} repair, in cash
+              {dueParts(due)}, in cash. The repair is quoted before it starts.
             </span>
           </DetailRow>
         ) : (

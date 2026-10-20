@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
-import { formatPeso } from "@/lib/bookings";
+import { formatPeso, payable } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/client";
 
 type Row = { key: number; description: string; amount: string };
@@ -23,7 +23,16 @@ function parseAmount(text: string) {
 }
 
 // After diagnosing: the price of the repair, item by item, for the customer to approve.
-export function QuoteForm({ jobId, inspectionFee }: { jobId: string; inspectionFee: number }) {
+export function QuoteForm({
+  jobId,
+  inspectionFee,
+  discount,
+}: {
+  jobId: string;
+  inspectionFee: number;
+  /** Taken off what the customer pays (their first-booking offer). */
+  discount: number;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([{ key: 0, description: "", amount: "" }]);
   const [note, setNote] = useState("");
@@ -140,9 +149,15 @@ export function QuoteForm({ jobId, inspectionFee }: { jobId: string; inspectionF
           <dt className="text-muted">Inspection fee</dt>
           <dd className="text-ink">{formatPeso(inspectionFee)}</dd>
         </div>
+        {discount > 0 && (
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted">First-booking offer</dt>
+            <dd className="text-ink">−{formatPeso(discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-4 font-bold">
           <dt className="text-ink">Customer pays</dt>
-          <dd className="text-ink">{formatPeso(total + inspectionFee)}</dd>
+          <dd className="text-ink">{formatPeso(payable(total + inspectionFee, discount))}</dd>
         </div>
       </dl>
 

@@ -2,6 +2,7 @@ import { CalendarCheck, CalendarClock, Mail, MapPin, Phone, UserRound, Wrench } 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingPhotos } from "@/components/bookings/booking-photos";
 import { DetailRow } from "@/components/bookings/detail-row";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
@@ -11,7 +12,9 @@ import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { BOOKING_FILTERS } from "@/lib/admin";
-import { amountDue, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
+import { PHOTO_BUCKET } from "@/lib/booking-photos";
+import { amountDue, dueParts, formatPeso, formatSchedule, fullAddress, isFinished, mapsLink, quoteItems } from "@/lib/bookings";
+import { withSignedUrls } from "@/lib/documents";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { ListLink } from "../../list-link";
@@ -47,11 +50,12 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment)",
+      "id, status, customer_id, technician_id, category_id, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at), quotes(id, items, total, note, status, created_at), reviews(rating, comment), booking_photos(id, storage_path, created_at)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
     .order("created_at", { referencedTable: "quotes" })
+    .order("created_at", { referencedTable: "booking_photos" })
     .maybeSingle();
   if (!booking) {
     return (
@@ -81,6 +85,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const phoneOf = (userId: string | null) => phones?.find((p) => p.user_id === userId)?.phone ?? null;
   const list = BOOKING_FILTERS.find((f) => (f.statuses as readonly string[]).includes(booking.status))?.value ?? "open";
   const due = amountDue(booking);
+  const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
   const customerName = booking.customer?.full_name || "The customer";
   const technicianName = booking.technician?.full_name || null;
 
@@ -98,6 +103,8 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
       </section>
+
+      <BookingPhotos bookingId={booking.id} photos={photos} editable={false} intro="From the customer." />
 
       {booking.status === "requested" && technicians && (
         <AssignTechnician
@@ -155,10 +162,15 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
             Open in Maps
           </a>
         </DetailRow>
-        <DetailRow icon={Wrench} label={booking.final_amount != null ? "Total paid" : due.repair > 0 ? "To pay" : "Inspection fee"}>
+        <DetailRow
+          icon={Wrench}
+          label={
+            booking.final_amount != null ? "Total paid" : due.repair > 0 || due.discount > 0 ? "To pay" : "Inspection fee"
+          }
+        >
           {formatPeso(booking.final_amount ?? due.total)}
           <span className="block text-muted">
-            {due.repair > 0 ? `${formatPeso(due.inspection)} inspection + ${formatPeso(due.repair)} repair, in cash` : "In cash"}
+            {due.repair > 0 || due.discount > 0 ? `${dueParts(due)}, in cash` : "In cash"}
           </span>
         </DetailRow>
       </section>

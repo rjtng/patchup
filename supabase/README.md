@@ -30,6 +30,8 @@ supabase/
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
 | `bookings`            | Repair requests and their current status                                      |
+| `booking_photos`      | Customers' photos of the problem on a booking, up to 3 (the files are in Storage) |
+| `first_booking_offer` | The amount taken off a customer's first booking (0 for none)               |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
 | `quotes`              | The technician's price for the repair, sent after diagnosis                   |
 | `messages`            | Chat between the customer and the technician                                 |
@@ -57,6 +59,8 @@ requested → accepted → en_route → arrived → quoted → in_progress → c
   new quote or finish with the inspection only).
 - On completion, the amount due is the inspection fee plus the approved quote.
 - Customers can cancel until the technician arrives; after that only an admin can.
+- A request nobody takes is followed up, and cancelled at the visit time if still nobody has it
+  (see "Requests nobody takes" below).
 
 Bookings can't be edited directly. Every step is a database function the app calls, for example
 `supabase.rpc('accept_booking', { booking_id })`. Each function checks who is calling and whether
@@ -154,7 +158,7 @@ through `set_technician_verification`, `assign_technician` and `cancel_booking`.
 add three functions, each of which refuses anyone who isn't an admin:
 
 - `admin_overview()`: the dashboard's counts, as JSON (technicians waiting for approval, requests
-  nobody has taken and those waiting over an hour, jobs in progress, the last 7 days).
+  nobody has taken and those waiting too long, jobs in progress, the last 7 days).
 - `admin_technicians(status, technician_id)`: technicians with their sign-up email, services and
   jobs done (both arguments optional).
 - `admin_emails(user_ids)`: people's sign-up email, to contact them.
@@ -162,6 +166,26 @@ add three functions, each of which refuses anyone who isn't an admin:
 Technicians are told when they're approved, turned down or suspended (a trigger on
 `verification_status`, so this also happens when it's changed by hand). When an admin cancels a
 booking, the customer and the technician hear that PatchUp cancelled it, with the reason given.
+
+## Requests nobody takes
+
+Every 5 minutes a pg_cron job, `follow-up-requests`, runs `private.follow_up_requests()`:
+
+- **Waiting too long:** a request without a technician for 30 minutes, or sooner once the visit is
+  less than 2 hours away (but after at least 10 minutes). Admins are notified so they can assign
+  someone, the customer hears that the PatchUp team is helping, and the technicians who could take
+  it are reminded. A request for a chosen technician who hasn't answered opens to the others. This
+  happens once each time a request starts waiting: when it's made, and again if a technician gives
+  it back.
+- **Visit time reached:** a request still without a technician is cancelled ("No technician was
+  free for this time") and the customer is told, with a "Book again" button on the booking that
+  fills in the form from it. A cancelled booking doesn't use up the first-booking offer.
+
+Both are booking steps (`overdue` and `expired`) on the timeline. The admin dashboard counts the
+requests waiting too long by the same rule (`private.follow_up_at`). To change the timings, change
+`private.follow_up_at` in a new migration (and `followUpAt` in `src/lib/admin.ts`). The job's runs
+are in `cron.job_run_details`; `select cron.unschedule('follow-up-requests')` stops it. A database
+without pg_cron (like the plain Postgres the tests can run on) doesn't follow up on its own.
 
 ## Search
 
@@ -171,6 +195,28 @@ other word (case and accents don't matter; % and _ are just characters). Someone
 name comes first, then those taking jobs, then the best rated. It runs with the searcher's own
 access, which already lets anyone see approved technicians, and lists only approved ones even for
 admins. The app turns a search into services and words (`src/lib/search.ts`).
+
+## Booking photos
+
+Customers add up to three photos of the problem to a booking, when they book or later until the job
+is done or cancelled, and can remove them until then. The files go to the private Storage bucket
+`booking-photos` (JPEG, PNG or WebP up to 5 MB; the app shrinks photos to a JPEG at most 1600 px
+across first), each in a folder named after the booking; `booking_photos` lists each booking's.
+Whoever can see a booking can see its photos: its customer, its technician, technicians who could
+take the open request, and admins. A trigger holds the limit of three.
+
+## First-booking offer
+
+A customer's first booking (not counting ones they cancelled) has the amount in
+`first_booking_offer` taken off what they pay: ₱100 to start. `create_booking` records it on the
+booking (`bookings.discount`), and `complete_booking` takes it off the inspection fee plus the
+approved repair (never below zero). Change the amount in the Table Editor, or set it to 0 to end the
+offer; bookings already made keep the discount they were made with. Only admins can change it.
+`first_booking_discount()` tells the app what the signed-in customer's next booking would get, so
+Home shows the offer only to customers who haven't booked.
+
+The technician collects the discounted amount in cash, so the offer is ₱100 less for them unless
+PatchUp makes it up; the admin's booking page shows each booking's discount.
 
 ## Services
 

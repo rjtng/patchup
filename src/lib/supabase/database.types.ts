@@ -114,6 +114,35 @@ export type Database = {
           },
         ]
       }
+      booking_photos: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          storage_path: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          storage_path: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_photos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           appliance: string
@@ -127,6 +156,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           customer_id: string
+          discount: number
           final_amount: number | null
           id: string
           inspection_fee: number
@@ -153,6 +183,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           customer_id: string
+          discount?: number
           final_amount?: number | null
           id?: string
           inspection_fee: number
@@ -179,6 +210,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           customer_id?: string
+          discount?: number
           final_amount?: number | null
           id?: string
           inspection_fee?: number
@@ -256,6 +288,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      first_booking_offer: {
+        Row: {
+          amount: number
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -856,6 +906,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      first_booking_discount: { Args: never; Returns: number }
       mark_arrived: {
         Args: { booking_id: string }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]

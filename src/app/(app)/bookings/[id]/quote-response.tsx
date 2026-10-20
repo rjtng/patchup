@@ -3,11 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatPeso } from "@/lib/bookings";
+import { dueParts, formatPeso, payable } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/client";
 
 // The customer's answer to the technician's quote.
-export function QuoteResponse({ quoteId, repair, inspectionFee }: { quoteId: string; repair: number; inspectionFee: number }) {
+export function QuoteResponse({
+  quoteId,
+  repair,
+  inspectionFee,
+  discount,
+}: {
+  quoteId: string;
+  repair: number;
+  inspectionFee: number;
+  discount: number;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<"approve" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +37,9 @@ export function QuoteResponse({ quoteId, repair, inspectionFee }: { quoteId: str
   return (
     <div className="mt-4 flex flex-col gap-3">
       <p className="text-sm text-muted">
-        Approve to start the repair: you&apos;ll pay {formatPeso(repair + inspectionFee)} in cash when it&apos;s done (
-        {formatPeso(inspectionFee)} inspection + {formatPeso(repair)} repair). If you decline, the technician can
-        send a new quote or finish with the inspection only.
+        Approve to start the repair: you&apos;ll pay {formatPeso(payable(repair + inspectionFee, discount))} in cash
+        when it&apos;s done ({dueParts({ inspection: inspectionFee, repair, discount })}). If you decline, the
+        technician can send a new quote or finish with the inspection only.
       </p>
       {error && (
         <p role="alert" className="rounded-field bg-danger/5 px-4 py-3 text-sm text-danger">
