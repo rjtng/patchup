@@ -58,6 +58,8 @@ Production and Preview. They are built into the app, so redeploy after changing 
 | `/technicians/[id]`                     | A technician's profile: rating, details, reviews, book them |
 | `/profile/addresses/new`, `/profile/addresses/[id]` | Add or edit a saved address, with its map pin |
 | `/profile/earnings`                     | Technicians' earnings: what PatchUp owes them, this month, payments |
+| `/profile/delete` → `/account-deleted`  | Deleting your account                                |
+| `/privacy`, `/terms`                    | Privacy Notice and Terms of Service                  |
 | `/admin`, `/admin/technicians`, `/admin/bookings`, `/admin/services`, `/admin/payouts` | Admin: overview, approving technicians, assigning and cancelling bookings, the services, paying technicians back |
 
 **Accounts work:** sign up (confirmed with the emailed link or 6-digit code), log in, log out and
@@ -85,6 +87,14 @@ screens too) so they can assign someone, the customer hears that the PatchUp tea
 technicians who could take it are reminded, and a request for a technician who hasn't answered
 opens to the others. If nobody has it by the visit time, it's cancelled and the customer is told;
 "Book again" on the booking fills in the form from it, and the first-booking offer still applies.
+
+**Privacy and terms:** the Privacy Notice (`/privacy`) and Terms of Service (`/terms`) describe what
+the app actually does, under the Data Privacy Act; sign-up asks people to agree to both (the version
+and time are kept with their account), and Profile links to them. Before launch, fill in the
+business details in `src/lib/legal.ts` and have a lawyer review both pages. **Deleting an account:**
+Profile, then Delete my account, once no booking or job is under way: the person's files go first
+(through Storage), then their details; finished bookings, payments and ratings are kept without
+their name, and the account can't log in again.
 
 **Paying technicians back:** a customer's first booking has the offer taken off what they pay, so
 the technician collects that much less; PatchUp pays it back. The technician's job says so, and

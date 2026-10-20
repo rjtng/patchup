@@ -878,6 +878,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      account_deletion_blocker: { Args: never; Returns: string }
       admin_emails: {
         Args: { user_ids: string[] }
         Returns: {
@@ -981,6 +982,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_my_account: { Args: never; Returns: undefined }
       first_booking_discount: { Args: never; Returns: number }
       mark_arrived: {
         Args: { booking_id: string }
@@ -1106,6 +1108,13 @@ export type Database = {
           longitude: number
         }
         Returns: undefined
+      }
+      start_account_deletion: {
+        Args: never
+        Returns: {
+          bucket: string
+          path: string
+        }[]
       }
       submit_review: {
         Args: { booking_id: string; comment?: string; rating: number }

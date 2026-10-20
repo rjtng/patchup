@@ -9,12 +9,15 @@ import { BackLink } from "@/components/ui/back-link";
  */
 export function AuthScreen({
   backHref,
+  back,
   title,
   subtitle,
   children,
   footer,
 }: {
   backHref?: string;
+  /** Instead of backHref, a back control of its own. */
+  back?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   children: ReactNode;
@@ -23,7 +26,7 @@ export function AuthScreen({
   return (
     <main className="flex min-h-dvh flex-col bg-white">
       <header className="bg-brand-gradient-deep px-6 pb-14 pt-[max(1rem,env(safe-area-inset-top))] text-white">
-        <div className="h-12">{backHref && <BackLink href={backHref} />}</div>
+        <div className="h-12">{back ?? (backHref && <BackLink href={backHref} />)}</div>
         <h1 className="mt-4 text-[2rem] font-bold leading-tight">{title}</h1>
         {subtitle && <p className="mt-2 text-base text-white/90">{subtitle}</p>}
       </header>

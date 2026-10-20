@@ -10,6 +10,7 @@ import { PasswordField, TextField } from "@/components/ui/text-field";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { emailLinkTarget } from "@/lib/auth-links";
 import { cn } from "@/lib/cn";
+import { LEGAL } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/client";
 
 type Role = "customer" | "technician";
@@ -48,7 +49,11 @@ export function SignupForm() {
     const { data: result, error } = await createClient().auth.signUp({
       email,
       password,
-      options: { data: { full_name: name, role }, emailRedirectTo: emailLinkTarget("signup") },
+      options: {
+        // With the account: which Terms and Privacy Notice they agreed to, and when.
+        data: { full_name: name, role, agreed_terms: LEGAL.version, agreed_at: new Date().toISOString() },
+        emailRedirectTo: emailLinkTarget("signup"),
+      },
     });
 
     if (error) {
@@ -141,7 +146,7 @@ export function SignupForm() {
         </Link>{" "}
         and{" "}
         <Link href="/privacy" className="font-semibold text-brand-navy underline underline-offset-2">
-          Privacy Policy
+          Privacy Notice
         </Link>
       </Checkbox>
 

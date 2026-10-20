@@ -210,6 +210,20 @@ a technician has taken but not set off for:
 The reminders aren't booking steps; `private.booking_reminders` records the ones sent, so each goes
 once (to each technician, for theirs). `select cron.unschedule('follow-up-visits')` stops the job.
 
+## Deleting an account
+
+People delete their own account from Profile, in two steps. `start_account_deletion()` checks they
+can (`account_deletion_blocker()`: not while a booking or job of theirs is under way, and not for
+admins) and lists their files; for the next hour, storage rules let them remove all of them (their
+documents, their bookings' photos), which the app does through Storage so the files themselves go
+(deleting `storage.objects` rows with SQL would leave the files behind). `delete_my_account()` then
+checks the files are gone and deletes or blanks everything else: addresses, mobile number, phones,
+notifications, messages they sent, documents, services, photos, their name, their bookings'
+street, pin and description, their name on reviews, and their work profile (suspended, so it's off
+the list). Their sign-in gets a placeholder email, no details or password, and a ban, and its
+sessions are deleted. Bookings, quotes, ratings and payouts stay, without the person, for
+PatchUp's records and the other side's history.
+
 ## Search
 
 `search_technicians(terms, service_slugs)` finds approved technicians for the app's Search: those
