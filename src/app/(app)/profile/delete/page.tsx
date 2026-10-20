@@ -41,7 +41,7 @@ async function DeleteDetails() {
           What&apos;s deleted
         </h2>
         <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-ink">
-          <li>Your name, email and password: you won&apos;t be able to log in again</li>
+          <li>Your name, photo, email and password: you won&apos;t be able to log in again</li>
           <li>Your mobile number{technician ? "" : " and saved addresses"}</li>
           {technician ? (
             <li>Your documents, and your profile as customers see it</li>

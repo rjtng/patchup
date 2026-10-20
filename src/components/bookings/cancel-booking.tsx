@@ -7,8 +7,21 @@ import { createClient } from "@/lib/supabase/client";
 
 // Cancelling asks for confirmation first; it can't be undone.
 export function CancelBooking({ bookingId }: { bookingId: string }) {
-  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <Button variant="danger" onClick={() => setConfirming(true)}>
+        Cancel booking
+      </Button>
+    );
+  }
+  return <CancelConfirm bookingId={bookingId} onClose={() => setConfirming(false)} />;
+}
+
+/** "Cancel this booking?": Keep it, or Yes, cancel (either closes it, with onClose). */
+export function CancelConfirm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,17 +34,10 @@ export function CancelBooking({ bookingId }: { bookingId: string }) {
       setError(error.code === "P0001" ? error.message : "We couldn't cancel it. Check your connection and try again.");
       return;
     }
-    setConfirming(false);
+    onClose();
     router.refresh();
   };
 
-  if (!confirming) {
-    return (
-      <Button variant="danger" onClick={() => setConfirming(true)}>
-        Cancel booking
-      </Button>
-    );
-  }
   return (
     <div role="group" aria-label="Cancel this booking?" className="rounded-card bg-white p-5 shadow-sm">
       <p className="font-semibold text-ink">Cancel this booking?</p>
@@ -42,7 +48,7 @@ export function CancelBooking({ bookingId }: { bookingId: string }) {
         </p>
       )}
       <div className="mt-4 flex gap-3">
-        <Button variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>
+        <Button variant="secondary" onClick={onClose} disabled={pending}>
           Keep it
         </Button>
         <Button variant="danger" onClick={cancel} disabled={pending}>

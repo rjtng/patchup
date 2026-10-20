@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { Avatar } from "@/components/people/avatar";
 import { ReviewItem, Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { formatDay } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
+import { profilePhotos } from "@/lib/profile-photos";
 import { isTechnician } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +18,7 @@ export const metadata: Metadata = { title: "Technician" };
 // Where the back arrow goes: the screen that linked here, if it's one of ours.
 function backHref(back: string | string[] | undefined) {
   if (typeof back !== "string") return "/home";
-  if (/^\/(home|services|bookings|jobs|profile|admin)(\/[\w-]+)*$/.test(back)) return back;
+  if (/^\/(home|services|bookings|jobs|profile|admin|track)(\/[\w-]+)*$/.test(back)) return back;
   // Back to a search, with what was searched for.
   if (/^\/search(\?q=[^#]*)?$/.test(back)) return back;
   return "/home";
@@ -50,7 +52,7 @@ async function TechnicianProfile({
 }) {
   const [{ id }, { back }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
-  const [{ data: auth }, { data: technician }, { data: reviews }] = await Promise.all([
+  const [{ data: auth }, { data: technician }, { data: reviews }, photos] = await Promise.all([
     supabase.auth.getClaims(),
     supabase
       .from("technician_profiles")
@@ -65,6 +67,7 @@ async function TechnicianProfile({
       .eq("technician_id", id)
       .order("created_at", { ascending: false })
       .limit(50),
+    profilePhotos(supabase, [id]),
   ]);
   const backTo = backHref(back);
 
@@ -104,12 +107,7 @@ async function TechnicianProfile({
 
         <section aria-label="About" className="flex flex-col gap-3 rounded-card bg-white p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <span
-              aria-hidden
-              className="grid size-16 shrink-0 place-items-center rounded-full bg-brand-navy/10 text-2xl font-bold text-brand-navy"
-            >
-              {name.charAt(0)}
-            </span>
+            <Avatar name={name} photo={photos.get(technician.id)} className="size-16 text-2xl" />
             <div className="min-w-0">
               {technician.rating_count > 0 ? (
                 <p className="flex flex-wrap items-center gap-2 text-sm text-ink">

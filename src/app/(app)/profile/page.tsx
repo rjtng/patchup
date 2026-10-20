@@ -14,10 +14,12 @@ import { withSignedUrls } from "@/lib/documents";
 import { formatPeso } from "@/lib/bookings";
 import { owedByTechnician } from "@/lib/payouts";
 import { isTechnician } from "@/lib/roles";
+import { profilePhotos } from "@/lib/profile-photos";
 import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import { DetailsForm } from "./details-form";
 import { Documents } from "./documents";
+import { ProfilePhoto } from "./profile-photo";
 import { WorkProfileForm } from "./work-profile-form";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -60,7 +62,7 @@ async function ProfileDetails() {
   if (!claims) return null;
   if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories, { data: paybacks }] =
+  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories, { data: paybacks }, photos] =
     await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
@@ -76,6 +78,7 @@ async function ProfileDetails() {
       .maybeSingle(),
     getServiceCategories(),
     supabase.rpc("paybacks"),
+    profilePhotos(supabase, [claims.sub]),
   ]);
   if (!work) {
     return (
@@ -100,6 +103,12 @@ async function ProfileDetails() {
   return (
     <>
       {documentsFirst && documentsSection}
+      <ProfilePhoto
+        userId={claims.sub}
+        name={profile?.full_name ?? ""}
+        photo={photos.get(claims.sub) ?? null}
+        technician
+      />
       <Link
         href={`/technicians/${claims.sub}?back=/profile`}
         className="mx-6 mt-6 flex items-center gap-4 rounded-card bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -151,14 +160,16 @@ async function ProfileDetails() {
 // A customer's details and saved addresses.
 async function CustomerProfile({ userId, email }: { userId: string; email: string }) {
   const supabase = await createClient();
-  const [{ data: profile }, { data: phone }, { data: addresses, error }] = await Promise.all([
+  const [{ data: profile }, { data: phone }, { data: addresses, error }, photos] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", userId).maybeSingle(),
     supabase.from("addresses").select("id, label, street, barangay, city, landmark, latitude").order("created_at"),
+    profilePhotos(supabase, [userId]),
   ]);
 
   return (
     <>
+      <ProfilePhoto userId={userId} name={profile?.full_name ?? ""} photo={photos.get(userId) ?? null} technician={false} />
       <DetailsForm userId={userId} name={profile?.full_name ?? ""} email={email} phone={phone?.phone ?? null} />
       <section aria-labelledby="addresses" className="flex flex-col gap-3 px-6 pt-8">
         <div>

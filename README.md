@@ -103,6 +103,13 @@ their Earnings (from Profile) show what PatchUp owes them, this month's jobs and
 payments from PatchUp. Admins see what's owed under Admin → Payouts (from the overview), send it by
 GCash or bank, and mark it as paid with the reference; the technician is told.
 
+**Photos and Top technicians:** anyone can add a profile photo from Profile (the app makes it a
+small square JPEG); technicians' show on their profile, in search, when picking a technician and on
+the customer's Track card, and a customer's own on Home. Home lists Top technicians: approved
+technicians taking jobs, those in the city of the customer's latest address first, then by rating.
+Track shows each coming visit with the technician's photo and rating, Call (once they've shared a
+number), Chat and Cancel, and when and where.
+
 **Receipts:** when the technician marks a job done, it gets a numbered receipt (PU-000001, in
 order) listing the inspection fee, each approved repair item and the first-booking offer, adding up
 to what was paid in cash. The customer opens it from the booking, the technician from the job and
