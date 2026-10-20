@@ -36,6 +36,19 @@ export default function ProfilePage() {
         <PushSettings variant="settings" />
         <LogoutButton />
       </div>
+      <nav aria-label="About your account" className="flex flex-col items-center gap-3 px-6 pt-6 text-sm">
+        <span className="flex gap-4">
+          <Link href="/privacy" className="font-semibold text-brand-navy underline">
+            Privacy Notice
+          </Link>
+          <Link href="/terms" className="font-semibold text-brand-navy underline">
+            Terms of Service
+          </Link>
+        </span>
+        <Link href="/profile/delete" className="font-semibold text-danger underline">
+          Delete my account
+        </Link>
+      </nav>
     </main>
   );
 }
