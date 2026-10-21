@@ -15,9 +15,11 @@ import {
 } from "@/components/bookings/visit-time-picker";
 import { addBookingPhotos, MAX_PHOTOS, shrinkPhoto } from "@/lib/booking-photos";
 import { formatPeso, visitTime } from "@/lib/bookings";
+import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import type { Point } from "@/lib/tracking";
+import { hoursSummary, type WorkingDay } from "@/lib/working-hours";
 import { PinAddress } from "@/components/addresses/pin-address";
 
 type Address = {
@@ -50,6 +52,7 @@ export function BookingForm({
   discount,
   initial,
   busy,
+  hours,
   now,
 }: {
   category: { id: string; name: string; inspection_fee: number };
@@ -62,11 +65,13 @@ export function BookingForm({
   initial?: { appliance: string; brand: string; problem: string; addressId?: string } | null;
   /** When the chosen technician is taken (their jobs' times, ISO): those times can't be picked. */
   busy: string[];
+  /** The chosen technician's working hours: times outside them can't be picked. */
+  hours: WorkingDay[];
   now: number;
 }) {
   const router = useRouter();
   const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
-  const [when, setWhen] = useState<VisitChoice>(() => ({ day: firstFreeDay(now, busyAt), slot: null }));
+  const [when, setWhen] = useState<VisitChoice>(() => ({ day: firstFreeDay(now, { busy: busyAt, hours }), slot: null }));
   const [addresses, setAddresses] = useState(initialAddresses);
   const [addressChoice, setAddressChoice] = useState(initial?.addressId ?? initialAddresses[0]?.id ?? NEW_ADDRESS);
   const [newPin, setNewPin] = useState<Point | null>(null); // for a new address
@@ -107,7 +112,7 @@ export function BookingForm({
     const next: typeof errors = {};
     if (!appliance) next.appliance = "Say what needs fixing.";
     if (!problem) next.problem = "Describe the problem so the technician comes prepared.";
-    if (!when.slot || !slotFree(when.day, when.slot, Date.now(), busyAt)) next.when = "Pick a visit time.";
+    if (!when.slot || !slotFree(when.day, when.slot, Date.now(), { busy: busyAt, hours })) next.when = "Pick a visit time.";
     if (newAddress) {
       if (!newAddress.street) next.street = "Enter the house number and street.";
       if (!newAddress.barangay) next.barangay = "Enter the barangay.";
@@ -235,8 +240,14 @@ export function BookingForm({
         onChange={setWhen}
         now={now}
         busy={busyAt}
+        hours={hours}
         error={errors.when}
       />
+      {technician && hoursSummary(hours) && (
+        <p className="-mt-3 text-sm text-muted">
+          {firstName(technician.full_name)} works {hoursSummary(hours)}.
+        </p>
+      )}
 
       <fieldset className="flex min-w-0 flex-col gap-3">
         <legend className="mb-3 text-lg font-bold text-ink">Where?</legend>

@@ -35,6 +35,7 @@ import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { worksAt } from "@/lib/working-hours";
 import { JobActions } from "./job-actions";
 
 export const metadata: Metadata = { title: "Job" };
@@ -104,6 +105,15 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
             .neq("id", job.id)
         ).data?.find((other) => clashes(Date.parse(job.scheduled_at), [Date.parse(other.scheduled_at)])) ?? null)
       : null;
+  // A request outside their working hours: marked (they can still take it).
+  const offHours =
+    job.status === "requested" &&
+    !clash &&
+    !worksAt(
+      (await supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", me ?? ""))
+        .data ?? [],
+      Date.parse(job.scheduled_at),
+    );
   // The customer's number, while the job is under way (the access rules return it only then).
   const phone =
     assigned && UNDER_WAY.includes(job.status)
@@ -119,6 +129,11 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
           {mine && job.status === "requested" && (
             <span className="inline-flex rounded-full bg-brand-navy px-3 py-1 text-xs font-semibold text-white">
               Asked for you
+            </span>
+          )}
+          {offHours && (
+            <span className="inline-flex rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
+              Outside your hours
             </span>
           )}
         </div>

@@ -21,6 +21,7 @@ import { DetailsForm } from "./details-form";
 import { Documents } from "./documents";
 import { ProfilePhoto } from "./profile-photo";
 import { WorkProfileForm } from "./work-profile-form";
+import { WorkingHours } from "./working-hours";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -62,8 +63,16 @@ async function ProfileDetails() {
   if (!claims) return null;
   if (!isTechnician(claims)) return <CustomerProfile userId={claims.sub} email={claims.email ?? ""} />;
 
-  const [{ data: profile }, { data: phone }, { data: documents }, { data: work }, categories, { data: paybacks }, photos] =
-    await Promise.all([
+  const [
+    { data: profile },
+    { data: phone },
+    { data: documents },
+    { data: work },
+    categories,
+    { data: paybacks },
+    photos,
+    { data: hours },
+  ] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
     supabase
@@ -79,6 +88,7 @@ async function ProfileDetails() {
     getServiceCategories(),
     supabase.rpc("paybacks"),
     profilePhotos(supabase, [claims.sub]),
+    supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", claims.sub),
   ]);
   if (!work) {
     return (
@@ -152,6 +162,7 @@ async function ProfileDetails() {
           .filter((id) => categories.some((c) => c.id === id))}
         categories={categories.map(({ id, name }) => ({ id, name }))}
       />
+      <WorkingHours initial={hours ?? []} />
       {!documentsFirst && documentsSection}
     </>
   );

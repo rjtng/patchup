@@ -25,6 +25,7 @@ supabase/
 | `profiles`            | Everyone with an account: name, role (customer, technician or admin) and profile photo |
 | `technician_profiles` | Technician details: bio, city, availability, approval status, rating         |
 | `technician_services` | Which service categories each technician works in                            |
+| `technician_hours`    | The days each technician works, with their first and last visit time (Manila) |
 | `service_categories`  | The services (Plumbing, Electrical, …): name, icon, order, inspection fee, shown or hidden |
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
@@ -263,6 +264,14 @@ except_booking)` lists when an approved technician is taken, for the app to grey
 technician sets off: the timeline notes the old time, the technician (if any) is told, the customer is
 told when an admin moved it, the reminders go again for the new time, and "running late" counts from
 the move.
+
+Working hours (`technician_hours`, set with `set_working_hours(days)`, which replaces the week):
+`private.works_at(technician, at)` says whether they work at a time, in Manila, and is true for
+anyone who hasn't set hours. `create_booking` refuses a time outside the hours of the technician
+asked for, a customer's `reschedule_booking` keeps a visit within them, and new or overdue requests
+for any technician notify only those working then. Technicians can still accept any open request,
+and admins can assign and move visits regardless. Approved technicians' hours are public, like the
+rest of their profile.
 
 Last minute (`private.is_last_minute`): a technician has the job, and it's less than 2 hours to the
 visit or they're on the way; not in the first 10 minutes after they took it or its time last changed.

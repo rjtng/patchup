@@ -43,9 +43,10 @@ export default function PrivacyPage() {
               or decline; what you pay; and the reviews you write.
             </li>
             <li>
-              <strong>Technicians:</strong> your city, experience, description and services; whether you&apos;re taking
-              jobs; your government ID, NBI clearance and certificates; your location while you&apos;re on the way to a
-              job; your jobs, quotes and the cash you collect; and PatchUp&apos;s payments to you, with their reference.
+              <strong>Technicians:</strong> your city, experience, description, services and working hours; whether
+              you&apos;re taking jobs; your government ID, NBI clearance and certificates; your location while
+              you&apos;re on the way to a job; your jobs, quotes and the cash you collect; and PatchUp&apos;s payments
+              to you, with their reference.
             </li>
             <li>
               The messages a customer and their technician send each other, and the problems you report to PatchUp with
@@ -93,7 +94,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Everyone:</strong> an approved technician&apos;s profile (photo, name, city, experience,
-              description, services, rating, and reviews with the reviewer&apos;s first name).
+              description, services, working hours, rating, and reviews with the reviewer&apos;s first name).
             </li>
             <li>
               <strong>PatchUp&apos;s admins:</strong> what they need to run PatchUp, including technicians&apos;

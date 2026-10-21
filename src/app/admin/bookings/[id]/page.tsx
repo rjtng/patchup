@@ -35,6 +35,7 @@ import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
 import { ADMIN_REASON, type ReportReason } from "@/lib/reports";
 import { createClient } from "@/lib/supabase/server";
+import { worksAt } from "@/lib/working-hours";
 import { ListLink } from "../../list-link";
 import { AdminCancel } from "./admin-cancel";
 import { AssignTechnician } from "./assign-technician";
@@ -126,7 +127,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const photos = await withSignedUrls(supabase, booking.booking_photos, PHOTO_BUCKET);
   const movable = booking.status === "requested" || booking.status === "accepted";
   const visit = Date.parse(booking.scheduled_at);
-  const [{ data: clashing }, { data: busy }] = await Promise.all([
+  const [{ data: clashing }, { data: busy }, { data: hours }] = await Promise.all([
     // Who could do it but has another job within two hours (they can't be given this one).
     technicians?.length
       ? supabase
@@ -141,6 +142,13 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
     // Moving the visit: when its technician is taken besides this visit.
     movable && booking.technician_id
       ? supabase.rpc("busy_times", { technician: booking.technician_id, except_booking: booking.id })
+      : Promise.resolve({ data: [] }),
+    // Who could do it and whether they work then (an admin can still give it to them).
+    technicians?.length
+      ? supabase
+          .from("technician_hours")
+          .select("technician_id, weekday, first_visit, last_visit")
+          .in("technician_id", technicians.map((t) => t.id))
       : Promise.resolve({ data: [] }),
   ]);
   const customerName = booking.customer?.full_name || "The customer";
@@ -225,11 +233,15 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
               rating: Number(t.rating_avg),
               reviews: t.rating_count,
               busy: Boolean(clashing?.some((c) => c.technician_id === t.id)),
+              off: !worksAt(hours?.filter((h) => h.technician_id === t.id) ?? [], visit),
             }))
-            // Those free then first, then those taking jobs, then the best rated.
+            // Those free then first, then those working then, then those taking jobs, then the best rated.
             .sort(
               (a, b) =>
-                Number(a.busy) - Number(b.busy) || Number(b.available) - Number(a.available) || b.rating - a.rating,
+                Number(a.busy) - Number(b.busy) ||
+                Number(a.off) - Number(b.off) ||
+                Number(b.available) - Number(a.available) ||
+                b.rating - a.rating,
             )}
         />
       )}
