@@ -55,6 +55,7 @@ async function BookingFormLoader({
     { data: busy },
     suspension,
     pausedUntil,
+    { data: hours },
   ] = await Promise.all([
     // Read fresh here (not from the cached list), so the fee shown is the one charged.
     supabase
@@ -84,6 +85,10 @@ async function BookingFormLoader({
     // A suspended customer can't book, nor one paused after last-minute cancellations (create_booking refuses them too).
     mySuspension(supabase),
     myBookingPause(supabase),
+    // Their working hours: times outside them can't be picked (booking holds to them too).
+    technicianId
+      ? supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", technicianId)
+      : Promise.resolve({ data: [] }),
   ]);
   if (!category) notFound();
   if (suspension || pausedUntil) {
@@ -119,6 +124,7 @@ async function BookingFormLoader({
         addresses={addresses ?? []}
         discount={discount ?? 0}
         busy={technician.data ? (busy ?? []) : []}
+        hours={technician.data ? (hours ?? []) : []}
         initial={
           previous && {
             appliance: previous.appliance,

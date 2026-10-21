@@ -1,4 +1,4 @@
-import { CalendarCheck, MapPin, UserRound } from "lucide-react";
+import { CalendarCheck, Clock, MapPin, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,6 +12,7 @@ import { firstName } from "@/lib/chat";
 import { profilePhotos } from "@/lib/profile-photos";
 import { isTechnician } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { hoursSummary } from "@/lib/working-hours";
 
 export const metadata: Metadata = { title: "Technician" };
 
@@ -57,7 +58,7 @@ async function TechnicianProfile({
     supabase
       .from("technician_profiles")
       .select(
-        "id, bio, city, years_experience, rating_avg, rating_count, is_available, profiles(full_name), technician_services(service_categories(name, slug, is_active, sort_order))",
+        "id, bio, city, years_experience, rating_avg, rating_count, is_available, profiles(full_name), technician_services(service_categories(name, slug, is_active, sort_order)), technician_hours(weekday, first_visit, last_visit)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -90,6 +91,7 @@ async function TechnicianProfile({
   const services = technician.technician_services
     .flatMap((s) => (s.service_categories?.is_active ? [s.service_categories] : []))
     .sort((a, b) => a.sort_order - b.sort_order);
+  const hours = hoursSummary(technician.technician_hours);
 
   return (
     <>
@@ -140,6 +142,15 @@ async function TechnicianProfile({
                 </li>
               ))}
             </ul>
+          )}
+          {hours && (
+            <p className="flex items-start gap-2 text-sm text-ink">
+              <Clock aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-navy" />
+              <span>
+                <span className="sr-only">Working hours: </span>
+                {hours}
+              </span>
+            </p>
           )}
         </section>
 

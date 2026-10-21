@@ -110,6 +110,13 @@ for them see those times as taken. Until the technician sets off, the customer (
 change the visit time from the booking; the technician is told, and the reminders go again for the
 new time.
 
+**Working hours:** technicians set the days they work and their first and last visit time on each
+(Profile → Working hours). Customers asking for them pick only from those times (the rest show as
+"Off"), on booking and when moving a visit; requests for any technician reach only those working
+then; their profile shows the hours. A technician can still take a request outside their hours
+(Jobs marks it), and admins see who works then when assigning. Until they save hours, they work any
+time.
+
 **Last-minute limits:** once a technician has a visit, the customer can move it twice, until 2 hours
 before, to a time at least 2 hours away. Customers can still cancel until the technician arrives,
 but cancelling less than 2 hours before the visit or once the technician is on the way is

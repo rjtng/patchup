@@ -1,4 +1,4 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, CalendarX, ChevronRight, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, CalendarX, ChevronRight, Clock, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,6 +12,7 @@ import { DOCUMENT_KINDS, documentLabel, formatSize, withSignedUrls, type Documen
 import { jobsLabel, owedByTechnician } from "@/lib/payouts";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { hoursSummary } from "@/lib/working-hours";
 import { ListLink } from "../../list-link";
 import { VerificationChip } from "../../verification-chip";
 import { VerificationActions } from "./verification-actions";
@@ -34,7 +35,7 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }, { data: record }] =
+  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }, { data: record }, { data: hours }] =
     await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
     supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
@@ -51,6 +52,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
       .limit(20),
     supabase.rpc("paybacks", { technician: id }),
     supabase.rpc("last_minute_record", { person: id }).single(),
+    supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", id),
   ]);
   const t = rows?.[0];
   if (!t) {
@@ -104,6 +106,9 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
         </DetailRow>
         <DetailRow icon={MapPin} label="Works in">
           {t.city || "Not given yet"}
+        </DetailRow>
+        <DetailRow icon={Clock} label="Working hours">
+          {hoursSummary(hours ?? []) ?? "Not set: any time"}
         </DetailRow>
         <DetailRow icon={CalendarClock} label="Experience">
           {t.years_experience == null ? "Not given yet" : t.years_experience === 1 ? "1 year" : `${t.years_experience} years`}

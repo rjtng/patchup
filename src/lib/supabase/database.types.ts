@@ -870,6 +870,35 @@ export type Database = {
           },
         ]
       }
+      technician_hours: {
+        Row: {
+          first_visit: string
+          last_visit: string
+          technician_id: string
+          weekday: number
+        }
+        Insert: {
+          first_visit: string
+          last_visit: string
+          technician_id: string
+          weekday: number
+        }
+        Update: {
+          first_visit?: string
+          last_visit?: string
+          technician_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_hours_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technician_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_locations: {
         Row: {
           accuracy: number | null
@@ -1239,6 +1268,16 @@ export type Database = {
           to: "technician_profiles"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      set_working_hours: {
+        Args: { days: Json }
+        Returns: Database["public"]["Tables"]["technician_hours"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "technician_hours"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       mark_notifications_read: { Args: never; Returns: undefined }

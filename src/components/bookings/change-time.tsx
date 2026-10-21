@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LAST_MINUTE_MS, TIME_SLOTS, TIME_ZONE, visitTime } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
+import type { WorkingDay } from "@/lib/working-hours";
 
 // Moving a visit to another time, until the technician sets off (see
 // reschedule_booking). Times when the technician is taken can't be picked.
@@ -22,6 +23,7 @@ export function ChangeTime({
   admin = false,
   movesLeft,
   blocked = null,
+  hours = [],
 }: {
   bookingId: string;
   /** The visit time now (ISO). */
@@ -36,6 +38,8 @@ export function ChangeTime({
   movesLeft?: number;
   /** Why it can't move now, if it can't. */
   blocked?: string | null;
+  /** The technician's working hours, when the customer moves it: it moves only within them. */
+  hours?: WorkingDay[];
 }) {
   const router = useRouter();
   const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
@@ -45,9 +49,11 @@ export function ChangeTime({
     // Start on the visit's own day (in Manila), if another time is free that day.
     const day = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date(current));
     const free = TIME_SLOTS.some(
-      (s) => Date.parse(visitTime(day, s.value)) !== Date.parse(current) && slotFree(day, s.value, now, busyAt, lead),
+      (s) =>
+        Date.parse(visitTime(day, s.value)) !== Date.parse(current) &&
+        slotFree(day, s.value, now, { busy: busyAt, lead, hours }),
     );
-    return { day: free ? day : firstFreeDay(now, busyAt, lead), slot: null };
+    return { day: free ? day : firstFreeDay(now, { busy: busyAt, lead, hours }), slot: null };
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +108,7 @@ export function ChangeTime({
         busy={busyAt}
         current={current}
         lead={lead}
+        hours={hours}
         inset="card"
       />
       <p className="text-sm text-muted">

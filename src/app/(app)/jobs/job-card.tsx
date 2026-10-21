@@ -14,6 +14,8 @@ export type Job = {
   service_categories: { name: string } | null;
   /** A request within two hours of a job they have: they can't take it. */
   clash?: boolean;
+  /** A request outside their working hours (they can still take it). */
+  offHours?: boolean;
 };
 
 export function JobCard({ job, me }: { job: Job; me: string }) {
@@ -41,6 +43,11 @@ export function JobCard({ job, me }: { job: Job; me: string }) {
           {job.clash && (
             <span className="inline-flex rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold text-danger">
               You have a job then
+            </span>
+          )}
+          {job.offHours && !job.clash && (
+            <span className="inline-flex rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
+              Outside your hours
             </span>
           )}
         </span>
