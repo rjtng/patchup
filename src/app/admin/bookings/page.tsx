@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CHIP_TONES, StatusChip } from "@/components/bookings/status-chip";
+import { ReturnVisitChip } from "@/components/bookings/warranty";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import {
   BOOKING_FILTERS,
@@ -56,7 +57,7 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
   const { data: bookings, error } = await supabase
     .from("bookings")
     .select(
-      "id, status, appliance, scheduled_at, created_at, completed_at, cancelled_at, barangay, city, technician_id, final_amount, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(event, created_at)",
+      "id, status, appliance, scheduled_at, created_at, completed_at, cancelled_at, barangay, city, technician_id, final_amount, return_of, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(event, created_at)",
     )
     .in("status", filter.statuses)
     .order(ORDER[show].column, { ascending: ORDER[show].ascending })
@@ -135,6 +136,7 @@ async function BookingList({ searchParams }: { searchParams: PageProps<"/admin/b
                         ) : (
                           <StatusChip status={b.status} />
                         )}
+                        {b.return_of && <ReturnVisitChip />}
                       </span>
                     </span>
                     <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />

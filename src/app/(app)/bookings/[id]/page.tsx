@@ -12,6 +12,7 @@ import { CancelBooking } from "@/components/bookings/cancel-booking";
 import { ChangeTime } from "@/components/bookings/change-time";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
+import { ReturnVisitChip, WarrantyCard } from "@/components/bookings/warranty";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { PushSettings } from "@/components/notifications/push-settings";
@@ -42,6 +43,7 @@ import { withSignedUrls } from "@/lib/documents";
 import { pin } from "@/lib/tracking";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/server";
+import { liveReturnVisit, warrantyUntil } from "@/lib/warranty";
 import { QuoteResponse } from "./quote-response";
 import { RateRepair } from "./rate-repair";
 
@@ -77,7 +79,7 @@ async function BookingDetails({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, created_at, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, actor_id, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
+      "id, status, customer_id, technician_id, created_at, completed_at, return_of, latitude, longitude, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, inspection_fee, discount, final_amount, cancel_reason, service_categories(name, slug), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, actor_id, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, created_at, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -149,6 +151,26 @@ async function BookingDetails({
   const cancellable = isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status);
   const taken = booking.technician_id !== null && (booking.status === "accepted" || booking.status === "en_route");
   const record = cancellable && taken ? (await supabase.rpc("last_minute_record").single()).data : null;
+  // The repair warranty: a repair's return visit, or a return visit's repair (and whether it can be asked for again).
+  const until = warrantyUntil(booking);
+  const [{ data: returnVisits }, { data: repair }] = await Promise.all([
+    until !== null || booking.return_of
+      ? supabase
+          .from("bookings")
+          .select("id, status, scheduled_at, completed_at")
+          .eq("return_of", booking.return_of ?? booking.id)
+          .order("created_at")
+      : Promise.resolve({ data: [] }),
+    booking.return_of
+      ? supabase
+          .from("bookings")
+          .select("id, status, completed_at, return_of, quotes(status)")
+          .eq("id", booking.return_of)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const returnVisit = liveReturnVisit(returnVisits ?? []);
+  const repairUntil = repair ? warrantyUntil(repair) : null;
   const who = technicianName ? firstName(technicianName) : "your technician";
   // Read once per request, after the data above, so the times offered (and the limits) start from now.
   // eslint-disable-next-line react-hooks/purity
@@ -163,17 +185,30 @@ async function BookingDetails({
       : moves.length >= MAX_MOVES
         ? "You've changed the time twice, so it can't change again. If this time doesn't work, cancel and book again."
         : null;
+  // A cancelled return visit: asked for again while the repair's warranty runs (and no other was asked for).
+  const askAgain = booking.return_of !== null && repairUntil !== null && now < repairUntil && !returnVisit;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
       <LiveUpdates topics={[`booking:${booking.id}`]} />
       <section className="rounded-card bg-white p-5 shadow-sm">
-        <StatusChip status={booking.status} />
+        <div className="flex flex-wrap gap-2">
+          <StatusChip status={booking.status} />
+          {booking.return_of && <ReturnVisitChip />}
+        </div>
         <h2 className="mt-3 text-xl font-bold text-ink">
           {booking.service_categories?.name}: {booking.appliance}
         </h2>
         {booking.brand && <p className="text-sm text-muted">{booking.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{booking.problem}</p>
+        {booking.return_of && (
+          <p className="mt-3 text-sm text-muted">
+            Under warranty{repair?.completed_at && `, for the repair done on ${formatDay(repair.completed_at)}`}.{" "}
+            <Link href={`/bookings/${booking.return_of}`} className="font-semibold text-brand-navy underline">
+              See the repair
+            </Link>
+          </p>
+        )}
       </section>
 
       {isCustomer && booking.status === "cancelled" && booking.service_categories && (
@@ -183,15 +218,21 @@ async function BookingDetails({
           </h2>
           <p className="mt-1 text-sm text-muted">
             {expired
-              ? "Sorry about that. Book again and pick another time."
+              ? `Sorry about that. ${askAgain ? "Ask" : "Book"} again and pick another time.`
               : booking.cancel_reason
                 ? `Reason: ${booking.cancel_reason}`
-                : "Book again whenever you're ready."}
+                : `${askAgain ? "Ask" : "Book"} again whenever you're ready.`}
             {offer > 0 && ` Your first-booking offer still applies: ${formatPeso(offer)} off.`}
           </p>
-          <ButtonLink href={`/services/${booking.service_categories.slug}/book?again=${booking.id}`} className="mt-4">
-            Book again
-          </ButtonLink>
+          {askAgain ? (
+            <ButtonLink href={`/bookings/${booking.return_of}/return-visit`} className="mt-4">
+              Ask for a return visit again
+            </ButtonLink>
+          ) : (
+            <ButtonLink href={`/services/${booking.service_categories.slug}/book?again=${booking.id}`} className="mt-4">
+              Book again
+            </ButtonLink>
+          )}
         </section>
       )}
 
@@ -233,6 +274,10 @@ async function BookingDetails({
               : `${formatDay(booking.reviews.created_at)}. Thanks for helping others choose!`}
           </p>
         </section>
+      )}
+
+      {isCustomer && until !== null && (
+        <WarrantyCard bookingId={booking.id} until={until} now={now} technician={who} returnVisit={returnVisit} />
       )}
 
       {booking.quotes
@@ -311,6 +356,13 @@ async function BookingDetails({
               {dueParts(due)}, in cash. The repair is quoted before it starts.
             </span>
           </DetailRow>
+        ) : booking.return_of ? (
+          <DetailRow icon={Wrench} label="Inspection fee">
+            Free: it&apos;s under warranty
+            <span className="block text-muted">
+              So is fixing the problem. New parts, if it needs them, are quoted before the repair starts.
+            </span>
+          </DetailRow>
         ) : (
           <DetailRow icon={Wrench} label="Inspection fee">
             {formatPeso(booking.inspection_fee)}
@@ -344,7 +396,7 @@ async function BookingDetails({
         </PushSettings>
       )}
 
-      <BookingTimeline events={booking.booking_events} />
+      <BookingTimeline events={booking.booking_events} returnVisit={booking.return_of !== null} />
 
       {isCustomer && <ReportProblem bookingId={booking.id} technician={false} reports={booking.reports} />}
 

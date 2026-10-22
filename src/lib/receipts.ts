@@ -11,18 +11,23 @@ export const receiptNumber = (number: number) => `PU-${String(number).padStart(6
 export type ReceiptLine = { label: string; amount: number };
 
 /**
- * What a done job's receipt lists: the inspection fee and each approved
- * repair item, then the first-booking offer as it was taken off. Together
- * they come to what was paid (final_amount, as complete_booking worked it out).
+ * What a done job's receipt lists: the inspection fee (none on a return
+ * visit under warranty) and each approved repair item, then the first-booking
+ * offer as it was taken off. Together they come to what was paid
+ * (final_amount, as complete_booking worked it out).
  */
 export function receiptLines(booking: {
   inspection_fee: number;
   final_amount: number;
+  return_of: string | null;
   quotes: { status: string; items: Json; total: number }[];
 }) {
   const approved = booking.quotes.filter((q) => q.status === "approved");
   const lines: ReceiptLine[] = [
-    { label: "Inspection fee", amount: booking.inspection_fee },
+    {
+      label: booking.return_of ? "Inspection fee: none, return visit under warranty" : "Inspection fee",
+      amount: booking.inspection_fee,
+    },
     ...approved.flatMap((q) => quoteItems(q.items).map((item) => ({ label: item.description, amount: item.amount }))),
   ];
   const before = booking.inspection_fee + approved.reduce((sum, q) => sum + q.total, 0);

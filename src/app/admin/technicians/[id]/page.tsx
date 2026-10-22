@@ -1,4 +1,4 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, CalendarX, ChevronRight, Clock, FileText, Mail, MapPin, Phone, Star, UserRound, Wrench } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, CalendarX, ChevronRight, Clock, FileText, Mail, MapPin, Phone, ShieldCheck, Star, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -44,6 +44,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
     { data: record },
     { data: hours },
     { data: timeOff },
+    { data: returnVisits },
   ] =
     await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
@@ -63,6 +64,8 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
     supabase.rpc("last_minute_record", { person: id }).single(),
     supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", id),
     supabase.from("technician_time_off").select("starts_on, ends_on").eq("technician_id", id).order("starts_on"),
+    // How their repairs hold up: how many needed a return visit under warranty.
+    supabase.rpc("return_visit_counts", { technician: id }),
   ]);
   const t = rows?.[0];
   if (!t) {
@@ -75,6 +78,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
   const name = t.full_name || "This technician";
   // First-booking offers PatchUp hasn't paid them back yet.
   const owed = owedByTechnician(paybacks ?? [])[0];
+  const repairs = returnVisits?.[0] ?? { repairs: 0, return_visits: 0 };
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-2">
@@ -146,6 +150,12 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
           {t.verification_status === "approved" && (
             <span className="block text-muted">{t.is_available ? "Taking new jobs now" : "Not taking new jobs now"}</span>
           )}
+        </DetailRow>
+        <DetailRow icon={ShieldCheck} label="Return visits">
+          {repairs.repairs === 0
+            ? "No repairs yet"
+            : `${repairs.return_visits} of ${repairs.repairs === 1 ? "1 repair" : `${repairs.repairs} repairs`}`}
+          <span className="block text-muted">Asked for under the 30-day warranty</span>
         </DetailRow>
         {record && record.give_backs > 0 && (
           <DetailRow icon={CalendarX} label="Last-minute give-backs">

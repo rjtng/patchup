@@ -27,11 +27,14 @@ export function QuoteForm({
   jobId,
   inspectionFee,
   discount,
+  returnVisit = false,
 }: {
   jobId: string;
   inspectionFee: number;
   /** Taken off what the customer pays (their first-booking offer). */
   discount: number;
+  /** A return visit under warranty: only new parts are charged for (see lib/warranty). */
+  returnVisit?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([{ key: 0, description: "", amount: "" }]);
@@ -79,9 +82,12 @@ export function QuoteForm({
     <form onSubmit={onSubmit} noValidate aria-labelledby="quote" className="flex flex-col gap-4 rounded-card bg-white p-5 shadow-sm">
       <div>
         <h2 id="quote" className="text-base font-bold text-ink">
-          Quote the repair
+          {returnVisit ? "Quote new parts" : "Quote the repair"}
         </h2>
-        <p className="mt-1 text-sm text-muted">The customer approves it before you start.</p>
+        <p className="mt-1 text-sm text-muted">
+          {returnVisit && "It's under warranty: quote only new parts it needs, not your work. "}The customer approves it
+          before you start.
+        </p>
       </div>
 
       {rows.map((row, i) => (
@@ -133,7 +139,7 @@ export function QuoteForm({
 
       <TextAreaField
         label="Note for the customer (optional)"
-        placeholder="e.g. Parts are original Samsung; 30-day warranty on the work."
+        placeholder="e.g. Parts are original Samsung."
         value={note}
         onChange={(e) => setNote(e.target.value)}
         maxLength={1000}
@@ -147,7 +153,7 @@ export function QuoteForm({
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-muted">Inspection fee</dt>
-          <dd className="text-ink">{formatPeso(inspectionFee)}</dd>
+          <dd className="text-ink">{returnVisit ? "Free" : formatPeso(inspectionFee)}</dd>
         </div>
         {discount > 0 && (
           <div className="flex justify-between gap-4">

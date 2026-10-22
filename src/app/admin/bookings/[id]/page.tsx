@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarClock, Flag, Mail, MapPin, Phone, UserRound, Wrench } from "lucide-react";
+import { CalendarCheck, CalendarClock, Flag, Mail, MapPin, Phone, ShieldCheck, UserRound, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -9,6 +9,7 @@ import { ReceiptLink } from "@/components/bookings/receipt-link";
 import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { BookingTimeline } from "@/components/bookings/timeline";
+import { ReturnVisitChip } from "@/components/bookings/warranty";
 import { LiveUpdates } from "@/components/live-updates";
 import { Stars } from "@/components/reviews/stars";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -27,6 +28,7 @@ import {
   isFinished,
   mapsLink,
   quoteItems,
+  STATUS,
   takenAt,
   UNDER_WAY,
 } from "@/lib/bookings";
@@ -35,6 +37,7 @@ import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
 import { ADMIN_REASON, type ReportReason } from "@/lib/reports";
 import { createClient } from "@/lib/supabase/server";
+import { liveReturnVisit, warrantyUntil } from "@/lib/warranty";
 import { onTimeOff, worksAt } from "@/lib/working-hours";
 import { ListLink } from "../../list-link";
 import { AdminCancel } from "./admin-cancel";
@@ -73,7 +76,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, category_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution, reporter_id, reporter:profiles!reports_reporter_id_fkey(full_name))",
+      "id, status, customer_id, technician_id, category_id, created_at, completed_at, return_of, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, hidden_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution, reporter_id, reporter:profiles!reports_reporter_id_fkey(full_name))",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -157,6 +160,25 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
           .in("technician_id", technicians.map((t) => t.id))
       : Promise.resolve({ data: [] }),
   ]);
+  // The repair warranty: a return visit's repair, or a repair's return visit (see lib/warranty).
+  const until = warrantyUntil(booking);
+  const [{ data: repair }, { data: returnVisits }] = await Promise.all([
+    booking.return_of
+      ? supabase
+          .from("bookings")
+          .select("id, completed_at, technician_id, technician:profiles!bookings_technician_id_fkey(full_name)")
+          .eq("id", booking.return_of)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    until !== null
+      ? supabase
+          .from("bookings")
+          .select("id, status, scheduled_at")
+          .eq("return_of", booking.id)
+          .order("created_at")
+      : Promise.resolve({ data: [] }),
+  ]);
+  const returnVisit = liveReturnVisit(returnVisits ?? []);
   const customerName = booking.customer?.full_name || "The customer";
   const roleOf = (userId: string) => (userId === booking.customer_id ? "customer" : "technician");
   const technicianName = booking.technician?.full_name || null;
@@ -165,6 +187,9 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
     booking.status === "accepted" &&
     // eslint-disable-next-line react-hooks/purity
     Date.now() >= lateAt(Date.parse(booking.scheduled_at), takenAt(booking));
+  // A repair's warranty: whether it still runs (read the same way).
+  // eslint-disable-next-line react-hooks/purity
+  const warrantyRuns = until !== null && Date.now() < until;
 
   return (
     <div className="flex flex-col gap-4 px-6">
@@ -173,7 +198,10 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
       </div>
       <LiveUpdates topics={[`booking:${booking.id}`]} />
       <section className="rounded-card bg-white p-5 shadow-sm">
-        <StatusChip status={booking.status} />
+        <div className="flex flex-wrap gap-2">
+          <StatusChip status={booking.status} />
+          {booking.return_of && <ReturnVisitChip />}
+        </div>
         <h2 className="mt-3 text-xl font-bold text-ink">
           {booking.service_categories?.name}: {booking.appliance}
         </h2>
@@ -221,6 +249,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
           bookingId={booking.id}
           category={booking.service_categories?.name ?? "this service"}
           askedFor={booking.status === "requested" ? booking.technician_id : null}
+          repairedBy={repair?.technician_id ?? null}
           current={
             booking.status === "accepted" && booking.technician_id
               ? {
@@ -308,10 +337,41 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         >
           {formatPeso(booking.final_amount ?? due.total)}
           <span className="block text-muted">
-            {due.repair > 0 || due.discount > 0 ? `${dueParts(due)}, in cash` : "In cash"}
+            {due.repair > 0 || due.discount > 0
+              ? `${dueParts(due)}, in cash`
+              : booking.return_of
+                ? "None: it's under warranty"
+                : "In cash"}
           </span>
           {booking.receipts && <ReceiptLink bookingId={booking.id} number={booking.receipts.number} />}
         </DetailRow>
+        {booking.return_of ? (
+          <DetailRow icon={ShieldCheck} label="Warranty">
+            Return visit for the repair
+            {repair?.completed_at && ` of ${formatDay(repair.completed_at)}`}
+            {repair?.technician?.full_name && ` by ${repair.technician.full_name}`}
+            <Link
+              href={`/admin/bookings/${booking.return_of}`}
+              className="mt-1 block w-fit font-semibold text-brand-navy underline"
+            >
+              See the repair
+            </Link>
+          </DetailRow>
+        ) : (
+          until !== null && (
+            <DetailRow icon={ShieldCheck} label="Warranty">
+              {warrantyRuns ? "Until" : "Ended"} {formatDay(new Date(until).toISOString())}
+              {returnVisit && (
+                <Link
+                  href={`/admin/bookings/${returnVisit.id}`}
+                  className="mt-1 block w-fit font-semibold text-brand-navy underline"
+                >
+                  Return visit: {formatSchedule(returnVisit.scheduled_at)}, {STATUS[returnVisit.status].label.toLowerCase()}
+                </Link>
+              )}
+            </DetailRow>
+          )
+        )}
       </section>
 
       {booking.quotes.map((quote) => (
@@ -386,7 +446,7 @@ async function BookingDetails({ params }: { params: PageProps<"/admin/bookings/[
         />
       )}
 
-      <BookingTimeline events={booking.booking_events} />
+      <BookingTimeline events={booking.booking_events} returnVisit={booking.return_of !== null} />
 
       <SuspendCustomer customerId={booking.customer_id} name={customerName} suspension={suspension} />
 

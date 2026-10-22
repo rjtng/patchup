@@ -123,6 +123,16 @@ customers asking for them can't pick them (the booking form says when they're of
 any technician don't reach them, and Jobs marks a request on their day off. Visitors don't see
 when a technician is away; signed-in customers see only coming days off, when booking.
 
+**Repair warranty:** a repair (a job done after the customer approved a quote) has a 30-day
+warranty, shown on the booking. If the problem comes back, the customer taps "Ask for a return
+visit", says what's wrong now and picks a time (when the technician who did it works and is free).
+That's a new booking for the same item and address with no inspection fee, for that technician: they
+fix the same problem at no charge for the work, and quote only new parts (Jobs and the job say it's
+a return visit). It never goes to other technicians by itself: if they turn it down, don't answer in
+time or can't take jobs any more, admins are told and give it to someone. A repair gets one return
+visit (another only if it's cancelled), and a return visit has no warranty of its own. Admins see
+how many of a technician's repairs needed one.
+
 **Last-minute limits:** once a technician has a visit, the customer can move it twice, until 2 hours
 before, to a time at least 2 hours away. Customers can still cancel until the technician arrives,
 but cancelling less than 2 hours before the visit or once the technician is on the way is

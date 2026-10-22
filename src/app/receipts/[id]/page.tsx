@@ -37,7 +37,7 @@ async function Receipt({ params }: { params: PageProps<"/receipts/[id]">["params
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, customer_id, technician_id, appliance, brand, scheduled_at, street, barangay, city, province, inspection_fee, final_amount, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), quotes(items, total, status, created_at), receipts(number, issued_at)",
+      "id, customer_id, technician_id, appliance, brand, scheduled_at, street, barangay, city, province, inspection_fee, final_amount, return_of, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), technician:profiles!bookings_technician_id_fkey(full_name), quotes(items, total, status, created_at), receipts(number, issued_at)",
     )
     .eq("id", id)
     .order("created_at", { referencedTable: "quotes" })

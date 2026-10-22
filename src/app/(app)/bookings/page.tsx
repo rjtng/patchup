@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusChip } from "@/components/bookings/status-chip";
+import { ReturnVisitChip } from "@/components/bookings/warranty";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
 import { ButtonLink } from "@/components/ui/button";
@@ -30,7 +31,7 @@ async function BookingList() {
   const me = auth?.claims.sub ?? "";
   const { data: bookings, error } = await supabase
     .from("bookings")
-    .select("id, status, appliance, scheduled_at, service_categories(name), reviews(rating)")
+    .select("id, status, appliance, scheduled_at, return_of, service_categories(name), reviews(rating)")
     .eq("customer_id", me)
     .order("scheduled_at");
   const live = <LiveUpdates topics={[`user:${me}`]} />;
@@ -80,6 +81,7 @@ async function BookingList() {
                       <span className="mt-0.5 block text-sm text-muted">{formatSchedule(b.scheduled_at)}</span>
                       <span className="mt-2 flex flex-wrap gap-2">
                         <StatusChip status={b.status} />
+                        {b.return_of && <ReturnVisitChip />}
                         {b.status === "completed" && !b.reviews && (
                           <span className="inline-flex rounded-full bg-brand-yellow px-3 py-1 text-xs font-semibold text-ink">
                             Rate your repair

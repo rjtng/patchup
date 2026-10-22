@@ -1,4 +1,4 @@
-import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, UserRound } from "lucide-react";
+import { Banknote, BriefcaseBusiness, CalendarClock, MapPin, ShieldCheck, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -9,6 +9,7 @@ import { QuoteItems } from "@/components/bookings/quote-items";
 import { StatusChip } from "@/components/bookings/status-chip";
 import { ContactButtons } from "@/components/bookings/contact-buttons";
 import { BookingTimeline } from "@/components/bookings/timeline";
+import { ReturnVisitChip } from "@/components/bookings/warranty";
 import { ReportProblem } from "@/components/reports/report-problem";
 import { PageHeader } from "@/components/layout/page-header";
 import { LiveUpdates } from "@/components/live-updates";
@@ -35,6 +36,7 @@ import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { warrantyUntil } from "@/lib/warranty";
 import { onTimeOff, worksAt } from "@/lib/working-hours";
 import { JobActions } from "./job-actions";
 
@@ -64,7 +66,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
   const { data: job } = await supabase
     .from("bookings")
     .select(
-      "id, status, customer_id, technician_id, created_at, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
+      "id, status, customer_id, technician_id, created_at, completed_at, return_of, appliance, brand, problem, scheduled_at, street, barangay, city, province, landmark, latitude, longitude, inspection_fee, discount, final_amount, cancel_reason, service_categories(name), customer:profiles!bookings_customer_id_fkey(full_name), booking_events(id, event, note, created_at, last_minute), quotes(id, items, total, note, status, created_at), reviews(rating, comment, customer_name, created_at), booking_photos(id, storage_path, created_at), receipts(number), reports(id, reason, details, created_at, resolved_at, resolution)",
     )
     .eq("id", id)
     .order("id", { referencedTable: "booking_events" })
@@ -120,6 +122,12 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
     assigned && UNDER_WAY.includes(job.status)
       ? ((await supabase.from("phone_numbers").select("phone").eq("user_id", job.customer_id).maybeSingle()).data?.phone ?? null)
       : null;
+  // A return visit's repair: the access rules return it to the technician who did it.
+  const repair = job.return_of
+    ? (await supabase.from("bookings").select("id, completed_at, technician_id").eq("id", job.return_of).maybeSingle()).data
+    : null;
+  // A repair of theirs: until when its customer can ask them for a return visit.
+  const until = mine ? warrantyUntil(job) : null;
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-6">
@@ -132,6 +140,7 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
               Asked for you
             </span>
           )}
+          {job.return_of && <ReturnVisitChip />}
           {dayOff && (
             <span className="inline-flex rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
               Your day off
@@ -149,6 +158,29 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         {job.brand && <p className="text-sm text-muted">{job.brand}</p>}
         <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink">{job.problem}</p>
       </section>
+
+      {job.return_of && (
+        <section aria-labelledby="return-visit" className="rounded-card bg-brand-navy/5 p-5 text-sm">
+          <h2 id="return-visit" className="flex items-center gap-2 font-bold text-ink">
+            <ShieldCheck aria-hidden className="size-5 shrink-0 text-brand-navy" />
+            Return visit under warranty
+          </h2>
+          <p className="mt-1 leading-relaxed text-ink">
+            {repair?.completed_at && repair.technician_id === me ? (
+              <>
+                The customer says your repair of {formatDay(repair.completed_at)} needs another look (
+                <Link href={`/jobs/${repair.id}`} className="font-semibold text-brand-navy underline">
+                  see that job
+                </Link>
+                ).
+              </>
+            ) : (
+              "It's for a repair done in the last 30 days."
+            )}{" "}
+            There&apos;s no inspection fee, and fixing the same problem is free. If it needs new parts, quote only those.
+          </p>
+        </section>
+      )}
 
       <BookingPhotos bookingId={job.id} photos={photos} editable={false} intro="From the customer." />
 
@@ -192,7 +224,11 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         <DetailRow icon={Banknote} label={job.final_amount != null ? "Collected" : "Customer pays in cash"}>
           {formatPeso(job.final_amount ?? due.total)}
           <span className="block text-muted">
-            {due.repair > 0 || due.discount > 0 ? dueParts(due) : "Inspection fee"}
+            {due.repair > 0 || due.discount > 0
+              ? dueParts(due)
+              : job.return_of
+                ? "No inspection fee: it's under warranty"
+                : "Inspection fee"}
           </span>
           {payback > 0 && (
             <span className="block text-muted">
@@ -201,6 +237,15 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
           )}
           {mine && job.receipts && <ReceiptLink bookingId={job.id} number={job.receipts.number} />}
         </DetailRow>
+        {until !== null && (
+          <DetailRow icon={ShieldCheck} label="Warranty">
+            Until {formatDay(new Date(until).toISOString())}
+            <span className="block text-muted">
+              If the problem comes back by then, the customer can ask you for a return visit: no inspection fee, and
+              no charge for fixing it.
+            </span>
+          </DetailRow>
+        )}
       </section>
 
       {mine && job.status === "en_route" && (
@@ -267,9 +312,10 @@ async function JobDetails({ params }: { params: PageProps<"/jobs/[id]">["params"
         amountDue={due.total}
         clash={clash && `${clash.appliance}, ${formatSchedule(clash.scheduled_at)}`}
         lastMinute={{ status: job.status, scheduledAt: job.scheduled_at, takenAt: takenAt(job) }}
+        returnVisit={job.return_of !== null}
       />
 
-      <BookingTimeline events={job.booking_events} />
+      <BookingTimeline events={job.booking_events} returnVisit={job.return_of !== null} />
 
       {assigned && <ReportProblem bookingId={job.id} technician reports={job.reports} />}
     </div>

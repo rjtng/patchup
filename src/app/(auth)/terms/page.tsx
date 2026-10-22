@@ -7,8 +7,9 @@ import { LEGAL } from "@/lib/legal";
 export const metadata: Metadata = { title: "Terms of Service" };
 
 // How PatchUp works between customers, technicians and PatchUp. It describes
-// what the app does (fees, quotes, cancelling, the first-booking offer): keep
-// it in step with it (and see LEGAL for the business details).
+// what the app does (fees, quotes, cancelling, the first-booking offer, the
+// repair warranty): keep it in step with it (and see LEGAL for the business
+// details).
 export default function TermsPage() {
   return (
     <AuthScreen
@@ -53,6 +54,12 @@ export default function TermsPage() {
               decline it. If you decline, you pay only the inspection fee.
             </li>
             <li>
+              A repair (one you approved the price of) has a 30-day warranty. If the problem comes back within 30 days
+              of the job being done, ask for a return visit from your booking: the technician who did it comes back,
+              with no inspection fee and no charge for the work. New parts, if it needs them, are quoted first, and you
+              decide. A repair gets one return visit, and a return visit doesn&apos;t have a warranty of its own.
+            </li>
+            <li>
               Your first booking (not counting ones you cancelled) gets the first-booking offer shown in the app, taken
               off what you pay. It never takes the total below zero.
             </li>
@@ -80,6 +87,11 @@ export default function TermsPage() {
               record.
             </li>
             <li>If you haven&apos;t set off by the visit time, PatchUp may give the job to another technician.</li>
+            <li>
+              Your repairs have a 30-day warranty. When a customer asks for a return visit, go back and fix the same
+              problem with no inspection fee and no charge for your work, quoting only new parts it needs. If you
+              can&apos;t go, turn it down as early as you can, and PatchUp finds another technician.
+            </li>
             <li>
               Quote honestly in the app before starting a repair, and collect only the amount the app shows. PatchUp
               pays you back the first-booking offer on your customers&apos; first bookings.

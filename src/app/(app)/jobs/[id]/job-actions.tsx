@@ -12,24 +12,35 @@ type Step = "accept" | "decline" | "en_route" | "arrived" | "complete";
 
 // What each step asks before it runs (the ones that can't be undone).
 type Confirm = { title: string; body: string; yes: string };
-type ConfirmFor = { status: BookingStatus; amount: string; lastMinute: boolean };
+type ConfirmFor = { status: BookingStatus; amount: string; free: boolean; lastMinute: boolean; returnVisit: boolean };
 const CONFIRM: Partial<Record<Step, (job: ConfirmFor) => Confirm>> = {
-  decline: ({ status, lastMinute }) =>
+  // A return visit doesn't go to the other technicians: PatchUp (an admin) gives it to someone.
+  decline: ({ status, lastMinute, returnVisit }) =>
     status === "requested"
-      ? { title: "Turn down this job?", body: "It goes to the other technicians instead.", yes: "Yes, turn it down" }
+      ? {
+          title: returnVisit ? "Turn down this return visit?" : "Turn down this job?",
+          body: returnVisit ? "PatchUp finds another technician to go." : "It goes to the other technicians instead.",
+          yes: "Yes, turn it down",
+        }
       : {
-          title: "Give this job back?",
+          title: returnVisit ? "Give this return visit back?" : "Give this job back?",
           body:
             (lastMinute
               ? `${status === "en_route" ? "You're on the way" : "The visit is less than 2 hours away"}, so this is a last-minute give-back: PatchUp is told, and it counts on your record. `
-              : "") + "It goes back to the other technicians, and you won't see the address any more.",
+              : "") +
+            (returnVisit
+              ? "PatchUp finds another technician to go, and you won't see the address any more."
+              : "It goes back to the other technicians, and you won't see the address any more."),
           yes: "Yes, give it back",
         },
-  complete: ({ amount }) => ({
-    title: `Collect ${amount} in cash`,
-    body: "Finish the job once the customer has paid you. This can't be undone.",
-    yes: "Job done, paid",
-  }),
+  complete: ({ amount, free }) =>
+    free
+      ? { title: "Nothing to collect", body: "Finish the job: there's nothing to pay. This can't be undone.", yes: "Job done" }
+      : {
+          title: `Collect ${amount} in cash`,
+          body: "Finish the job once the customer has paid you. This can't be undone.",
+          yes: "Job done, paid",
+        },
 };
 
 // The booking functions' own messages are written for people; anything else
@@ -49,6 +60,7 @@ export function JobActions({
   amountDue,
   clash = null,
   lastMinute,
+  returnVisit = false,
 }: {
   jobId: string;
   status: BookingStatus;
@@ -61,6 +73,8 @@ export function JobActions({
   clash?: string | null;
   /** Their job, for warning about giving it back at the last minute. */
   lastMinute?: LastMinuteCheck;
+  /** A return visit under warranty (see lib/warranty). */
+  returnVisit?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<Step | null>(null);
@@ -94,7 +108,15 @@ export function JobActions({
     router.refresh();
   };
 
-  const confirm = confirming && CONFIRM[confirming]?.({ status, amount: formatPeso(amountDue), lastMinute: lastMinuteNow });
+  const confirm =
+    confirming &&
+    CONFIRM[confirming]?.({
+      status,
+      amount: formatPeso(amountDue),
+      free: amountDue === 0,
+      lastMinute: lastMinuteNow,
+      returnVisit,
+    });
   if (confirming && confirm) {
     return (
       <div role="group" aria-label={confirm.title} className="rounded-card bg-white p-5 shadow-sm">
@@ -161,11 +183,17 @@ export function JobActions({
   } else if (status === "arrived") {
     actions = (
       <>
-        <QuoteForm jobId={jobId} inspectionFee={inspectionFee} discount={discount} />
+        <QuoteForm jobId={jobId} inspectionFee={inspectionFee} discount={discount} returnVisit={returnVisit} />
         <p className="mt-2 text-sm text-muted">
-          No repair needed, or the customer doesn&apos;t want one? Finish with the inspection only.
+          {returnVisit
+            ? "Fixed it without new parts, or nothing to fix? Finish at no charge."
+            : "No repair needed, or the customer doesn't want one? Finish with the inspection only."}
         </p>
-        {button("complete", `Finish: inspection only (${formatPeso(payable(inspectionFee, discount))})`, "secondary")}
+        {button(
+          "complete",
+          returnVisit ? "Finish: no charge" : `Finish: inspection only (${formatPeso(payable(inspectionFee, discount))})`,
+          "secondary",
+        )}
       </>
     );
   } else if (status === "quoted") {
