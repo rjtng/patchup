@@ -16,6 +16,8 @@ export type Job = {
   clash?: boolean;
   /** A request outside their working hours (they can still take it). */
   offHours?: boolean;
+  /** A request on one of their days off (they can still take it). */
+  dayOff?: boolean;
 };
 
 export function JobCard({ job, me }: { job: Job; me: string }) {
@@ -43,6 +45,11 @@ export function JobCard({ job, me }: { job: Job; me: string }) {
           {job.clash && (
             <span className="inline-flex rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold text-danger">
               You have a job then
+            </span>
+          )}
+          {job.dayOff && !job.clash && (
+            <span className="inline-flex rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
+              Your day off
             </span>
           )}
           {job.offHours && !job.clash && (

@@ -56,6 +56,7 @@ async function BookingFormLoader({
     suspension,
     pausedUntil,
     { data: hours },
+    { data: timeOff },
   ] = await Promise.all([
     // Read fresh here (not from the cached list), so the fee shown is the one charged.
     supabase
@@ -88,6 +89,14 @@ async function BookingFormLoader({
     // Their working hours: times outside them can't be picked (booking holds to them too).
     technicianId
       ? supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", technicianId)
+      : Promise.resolve({ data: [] }),
+    // and their coming days off (the access rules return only those).
+    technicianId
+      ? supabase
+          .from("technician_time_off")
+          .select("starts_on, ends_on")
+          .eq("technician_id", technicianId)
+          .order("starts_on")
       : Promise.resolve({ data: [] }),
   ]);
   if (!category) notFound();
@@ -125,6 +134,7 @@ async function BookingFormLoader({
         discount={discount ?? 0}
         busy={technician.data ? (busy ?? []) : []}
         hours={technician.data ? (hours ?? []) : []}
+        timeOff={technician.data ? (timeOff ?? []) : []}
         initial={
           previous && {
             appliance: previous.appliance,

@@ -117,6 +117,12 @@ then; their profile shows the hours. A technician can still take a request outsi
 (Jobs marks it), and admins see who works then when assigning. Until they save hours, they work any
 time.
 
+**Time off:** technicians add days off, like a holiday or a sick day (Profile → Time off; one day or
+a range, up to 60 days, not over a job they have). Those days count like hours they don't work:
+customers asking for them can't pick them (the booking form says when they're off), requests for
+any technician don't reach them, and Jobs marks a request on their day off. Visitors don't see
+when a technician is away; signed-in customers see only coming days off, when booking.
+
 **Last-minute limits:** once a technician has a visit, the customer can move it twice, until 2 hours
 before, to a time at least 2 hours away. Customers can still cancel until the technician arrives,
 but cancelling less than 2 hours before the visit or once the technician is on the way is

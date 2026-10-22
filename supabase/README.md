@@ -26,6 +26,7 @@ supabase/
 | `technician_profiles` | Technician details: bio, city, availability, approval status, rating         |
 | `technician_services` | Which service categories each technician works in                            |
 | `technician_hours`    | The days each technician works, with their first and last visit time (Manila) |
+| `technician_time_off` | Days a technician doesn't work, on top of their hours (first and last Manila date) |
 | `service_categories`  | The services (Plumbing, Electrical, …): name, icon, order, inspection fee, shown or hidden |
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
@@ -272,6 +273,12 @@ asked for, a customer's `reschedule_booking` keeps a visit within them, and new 
 for any technician notify only those working then. Technicians can still accept any open request,
 and admins can assign and move visits regardless. Approved technicians' hours are public, like the
 rest of their profile.
+
+Time off (`technician_time_off`, added with `add_time_off(starts_on, ends_on)` and taken back with
+`remove_time_off(time_off_id)`) counts in `private.works_at` too, so it applies wherever hours do.
+Adding it checks the days (in order, from today, within a year, up to 60 at a time), refuses an
+overlap with other time off, and refuses days with a job the technician has (they give it back
+first). Signed-in people see an approved technician's coming days off; visitors see none.
 
 Last minute (`private.is_last_minute`): a technician has the job, and it's less than 2 hours to the
 visit or they're on the way; not in the first 10 minutes after they took it or its time last changed.

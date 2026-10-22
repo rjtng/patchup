@@ -17,10 +17,12 @@ import { isTechnician } from "@/lib/roles";
 import { profilePhotos } from "@/lib/profile-photos";
 import { getServiceCategories } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
+import { manilaDay } from "@/lib/working-hours";
 import { DetailsForm } from "./details-form";
 import { Documents } from "./documents";
 import { ProfilePhoto } from "./profile-photo";
 import { WorkProfileForm } from "./work-profile-form";
+import { TimeOff } from "./time-off";
 import { WorkingHours } from "./working-hours";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -72,6 +74,7 @@ async function ProfileDetails() {
     { data: paybacks },
     photos,
     { data: hours },
+    { data: timeOff },
   ] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
     supabase.from("phone_numbers").select("phone").eq("user_id", claims.sub).maybeSingle(),
@@ -89,6 +92,11 @@ async function ProfileDetails() {
     supabase.rpc("paybacks"),
     profilePhotos(supabase, [claims.sub]),
     supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", claims.sub),
+    supabase
+      .from("technician_time_off")
+      .select("id, starts_on, ends_on")
+      .eq("technician_id", claims.sub)
+      .order("starts_on"),
   ]);
   if (!work) {
     return (
@@ -163,6 +171,12 @@ async function ProfileDetails() {
         categories={categories.map(({ id, name }) => ({ id, name }))}
       />
       <WorkingHours initial={hours ?? []} />
+      <TimeOff
+        timeOff={timeOff ?? []}
+        // Read once per request, after the data above: what "coming" means, and the earliest day to pick.
+        // eslint-disable-next-line react-hooks/purity
+        today={manilaDay(Date.now())}
+      />
       {!documentsFirst && documentsSection}
     </>
   );

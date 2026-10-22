@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardsSkeleton } from "@/components/ui/skeleton";
 import { clashes, isFinished } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/server";
-import { worksAt } from "@/lib/working-hours";
+import { onTimeOff, worksAt } from "@/lib/working-hours";
 import { AvailabilityToggle } from "./availability-toggle";
 import { JobCard, type Job } from "./job-card";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -44,7 +44,7 @@ async function JobBoard() {
   const [{ data: profile, error: profileError }, { data: jobs, error }] = await Promise.all([
     supabase
       .from("technician_profiles")
-      .select("verification_status, is_available, technician_services(category_id), technician_hours(weekday, first_visit, last_visit)")
+      .select("verification_status, is_available, technician_services(category_id), technician_hours(weekday, first_visit, last_visit), technician_time_off(starts_on, ends_on)")
       .eq("id", me)
       .maybeSingle(),
     // The access rules return this technician's own jobs plus the open
@@ -82,12 +82,12 @@ async function JobBoard() {
   const active = jobs.filter((j) => j.technician_id === me && j.status !== "requested" && !isFinished(j.status));
   // Requests within two hours of a job they have can't be taken (see accept_booking).
   const taken = active.map((j) => Date.parse(j.scheduled_at));
-  // and those outside their working hours are marked (they can still take them).
-  const marked = requests.map((j) => ({
-    ...j,
-    clash: clashes(Date.parse(j.scheduled_at), taken),
-    offHours: !worksAt(profile.technician_hours, Date.parse(j.scheduled_at)),
-  }));
+  // and those on a day off or outside their working hours are marked (they can still take them).
+  const marked = requests.map((j) => {
+    const at = Date.parse(j.scheduled_at);
+    const dayOff = onTimeOff(profile.technician_time_off, at);
+    return { ...j, clash: clashes(at, taken), dayOff, offHours: !dayOff && !worksAt(profile.technician_hours, at) };
+  });
   const done = jobs.filter((j) => j.technician_id === me && isFinished(j.status)).reverse();
 
   // Their own jobs, and new requests in their services while they're taking jobs.

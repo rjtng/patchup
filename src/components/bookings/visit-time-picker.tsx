@@ -2,7 +2,7 @@
 
 import { clashes, isSlotOpen, TIME_SLOTS, upcomingDays, visitTime } from "@/lib/bookings";
 import { cn } from "@/lib/cn";
-import { worksAt, type WorkingDay } from "@/lib/working-hours";
+import { onTimeOff, worksAt, type TimeOff, type WorkingDay } from "@/lib/working-hours";
 
 // A radio button styled as a chip. `relative` keeps the hidden input inside the
 // chip, so the scrolling row of days can't widen the page.
@@ -19,19 +19,20 @@ export type VisitChoice = { day: string; slot: string | null };
 /**
  * What else decides whether a time can be picked, for a technician: when
  * they're taken (`busy`, in ms: within two hours of another of their jobs),
- * how far ahead it must be (`lead`, see isSlotOpen) and their working hours.
+ * how far ahead it must be (`lead`, see isSlotOpen), their working hours and
+ * their days off.
  */
-export type Availability = { busy?: number[]; lead?: number; hours?: WorkingDay[] };
+export type Availability = { busy?: number[]; lead?: number; hours?: WorkingDay[]; timeOff?: TimeOff[] };
 
 /** Whether a slot can be picked: far enough ahead, and the technician (if any) works then and isn't taken. */
 export const slotFree = (
   day: string,
   slot: string,
   now: number,
-  { busy = [], lead, hours = [] }: Availability = {},
+  { busy = [], lead, hours = [], timeOff = [] }: Availability = {},
 ) => {
   const at = Date.parse(visitTime(day, slot));
-  return isSlotOpen(day, slot, now, lead) && worksAt(hours, at) && !clashes(at, busy);
+  return isSlotOpen(day, slot, now, lead) && worksAt(hours, at) && !onTimeOff(timeOff, at) && !clashes(at, busy);
 };
 
 /** The first day with a time that can be picked. */
@@ -54,6 +55,7 @@ export function VisitTimePicker({
   current,
   lead,
   hours = [],
+  timeOff = [],
   error,
   inset = "page",
 }: {
@@ -68,6 +70,8 @@ export function VisitTimePicker({
   lead?: number;
   /** The technician's working hours: times outside them are off. */
   hours?: WorkingDay[];
+  /** and their days off. */
+  timeOff?: TimeOff[];
   error?: string;
   /** What it sits in, so the scrolling row of days runs to its edges: the page, or a card. */
   inset?: "page" | "card";
@@ -75,7 +79,8 @@ export function VisitTimePicker({
   const days = upcomingDays(now);
   const isCurrent = (day: string, slot: string) =>
     current !== undefined && Date.parse(visitTime(day, slot)) === Date.parse(current);
-  const free = (day: string, slot: string) => slotFree(day, slot, now, { busy, lead, hours }) && !isCurrent(day, slot);
+  const free = (day: string, slot: string) =>
+    slotFree(day, slot, now, { busy, lead, hours, timeOff }) && !isCurrent(day, slot);
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-3">
@@ -110,7 +115,7 @@ export function VisitTimePicker({
             ? null
             : isCurrent(value.day, s.value)
               ? "Now"
-              : !worksAt(hours, at)
+              : !worksAt(hours, at) || onTimeOff(timeOff, at)
                 ? "Off"
                 : clashes(at, busy)
                   ? "Taken"

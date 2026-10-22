@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LAST_MINUTE_MS, TIME_SLOTS, TIME_ZONE, visitTime } from "@/lib/bookings";
 import { firstName } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
-import type { WorkingDay } from "@/lib/working-hours";
+import type { TimeOff, WorkingDay } from "@/lib/working-hours";
 
 // Moving a visit to another time, until the technician sets off (see
 // reschedule_booking). Times when the technician is taken can't be picked.
@@ -24,6 +24,7 @@ export function ChangeTime({
   movesLeft,
   blocked = null,
   hours = [],
+  timeOff = [],
 }: {
   bookingId: string;
   /** The visit time now (ISO). */
@@ -40,6 +41,8 @@ export function ChangeTime({
   blocked?: string | null;
   /** The technician's working hours, when the customer moves it: it moves only within them. */
   hours?: WorkingDay[];
+  /** and not onto their days off. */
+  timeOff?: TimeOff[];
 }) {
   const router = useRouter();
   const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
@@ -51,9 +54,9 @@ export function ChangeTime({
     const free = TIME_SLOTS.some(
       (s) =>
         Date.parse(visitTime(day, s.value)) !== Date.parse(current) &&
-        slotFree(day, s.value, now, { busy: busyAt, lead, hours }),
+        slotFree(day, s.value, now, { busy: busyAt, lead, hours, timeOff }),
     );
-    return { day: free ? day : firstFreeDay(now, { busy: busyAt, lead, hours }), slot: null };
+    return { day: free ? day : firstFreeDay(now, { busy: busyAt, lead, hours, timeOff }), slot: null };
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +112,7 @@ export function ChangeTime({
         current={current}
         lead={lead}
         hours={hours}
+        timeOff={timeOff}
         inset="card"
       />
       <p className="text-sm text-muted">
