@@ -1021,6 +1021,38 @@ export type Database = {
           },
         ]
       }
+      technician_time_off: {
+        Row: {
+          created_at: string
+          ends_on: string
+          id: string
+          starts_on: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          id?: string
+          starts_on: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          id?: string
+          starts_on?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_time_off_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technician_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1270,6 +1302,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      add_time_off: {
+        Args: { ends_on: string; starts_on: string }
+        Returns: Database["public"]["Tables"]["technician_time_off"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "technician_time_off"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_time_off: { Args: { time_off_id: string }; Returns: undefined }
       set_working_hours: {
         Args: { days: Json }
         Returns: Database["public"]["Tables"]["technician_hours"]["Row"][]

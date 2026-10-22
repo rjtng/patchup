@@ -39,6 +39,41 @@ export function worksAt(hours: WorkingDay[], at: number) {
   return hours.some((h) => h.weekday === weekday && hhmm(h.first_visit) <= time && time <= hhmm(h.last_visit));
 }
 
+// --- Time off (see the time off migration) -------------------------------------
+// Whole days they don't work, on top of their weekly hours: first and last
+// day, as Manila dates ("2026-10-31").
+
+export type TimeOff = { starts_on: string; ends_on: string };
+
+/** The date in Manila at a moment (ms), as the database writes dates: "2026-10-31". */
+export const manilaDay = (at: number) => new Date(at + MANILA_MS).toISOString().slice(0, 10);
+
+/** Whether a moment (ms) falls on one of their days off. */
+export function onTimeOff(timeOff: TimeOff[], at: number) {
+  const day = manilaDay(at);
+  return timeOff.some((t) => t.starts_on <= day && day <= t.ends_on);
+}
+
+const dayLabel = (day: string) =>
+  new Intl.DateTimeFormat("en-PH", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(
+    new Date(`${day}T00:00:00Z`),
+  );
+
+/** "Sat, Oct 31", or "Sat, Oct 31 – Mon, Nov 2" */
+export const timeOffLabel = (t: TimeOff) =>
+  t.starts_on === t.ends_on ? dayLabel(t.starts_on) : `${dayLabel(t.starts_on)} – ${dayLabel(t.ends_on)}`;
+
+/**
+ * When a technician works, for customers choosing a time: "Tess works Mon–Fri
+ * 8:00 AM–3:00 PM and is off Sat, Oct 31 – Mon, Nov 2." Null when they work any time.
+ */
+export function scheduleNote(name: string, hours: WorkingDay[], timeOff: TimeOff[]) {
+  const works = hoursSummary(hours);
+  const off = timeOff.map(timeOffLabel).join(", ");
+  if (!works && !off) return null;
+  return `${name} ${[works && `works ${works}`, off && `is off ${off}`].filter(Boolean).join(" and ")}.`;
+}
+
 /** "Mon–Fri 8:00 AM–5:00 PM · Sat 8:00 AM–1:00 PM", or null when they haven't set hours (they work any time). */
 export function hoursSummary(hours: WorkingDay[]) {
   if (hours.length === 0) return null;

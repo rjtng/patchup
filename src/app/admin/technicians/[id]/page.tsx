@@ -12,7 +12,7 @@ import { DOCUMENT_KINDS, documentLabel, formatSize, withSignedUrls, type Documen
 import { jobsLabel, owedByTechnician } from "@/lib/payouts";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { hoursSummary } from "@/lib/working-hours";
+import { hoursSummary, manilaDay, timeOffLabel } from "@/lib/working-hours";
 import { ListLink } from "../../list-link";
 import { VerificationChip } from "../../verification-chip";
 import { VerificationActions } from "./verification-actions";
@@ -35,7 +35,16 @@ export default function AdminTechnicianPage({ params }: PageProps<"/admin/techni
 async function TechnicianDetails({ params }: { params: PageProps<"/admin/technicians/[id]">["params"] }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: rows }, { data: phone }, { data: documents }, { data: jobs }, { data: paybacks }, { data: record }, { data: hours }] =
+  const [
+    { data: rows },
+    { data: phone },
+    { data: documents },
+    { data: jobs },
+    { data: paybacks },
+    { data: record },
+    { data: hours },
+    { data: timeOff },
+  ] =
     await Promise.all([
     supabase.rpc("admin_technicians", { technician_id: id }),
     supabase.from("phone_numbers").select("phone").eq("user_id", id).maybeSingle(),
@@ -53,6 +62,7 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
     supabase.rpc("paybacks", { technician: id }),
     supabase.rpc("last_minute_record", { person: id }).single(),
     supabase.from("technician_hours").select("weekday, first_visit, last_visit").eq("technician_id", id),
+    supabase.from("technician_time_off").select("starts_on, ends_on").eq("technician_id", id).order("starts_on"),
   ]);
   const t = rows?.[0];
   if (!t) {
@@ -109,6 +119,14 @@ async function TechnicianDetails({ params }: { params: PageProps<"/admin/technic
         </DetailRow>
         <DetailRow icon={Clock} label="Working hours">
           {hoursSummary(hours ?? []) ?? "Not set: any time"}
+        </DetailRow>
+        <DetailRow icon={CalendarX} label="Time off">
+          {(timeOff ?? [])
+            // Coming up: read once per request, after the data above.
+            // eslint-disable-next-line react-hooks/purity
+            .filter((t) => t.ends_on >= manilaDay(Date.now()))
+            .map(timeOffLabel)
+            .join(", ") || "None coming up"}
         </DetailRow>
         <DetailRow icon={CalendarClock} label="Experience">
           {t.years_experience == null ? "Not given yet" : t.years_experience === 1 ? "1 year" : `${t.years_experience} years`}

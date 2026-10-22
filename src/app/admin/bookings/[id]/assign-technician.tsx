@@ -16,8 +16,10 @@ export type Candidate = {
   reviews: number;
   /** Has another job within two hours of this visit: can't be given it. */
   busy: boolean;
-  /** Doesn't work then, by their working hours (they can still be given it). */
+  /** Doesn't work then, by their working hours or a day off (they can still be given it). */
   off: boolean;
+  /** It's one of their days off. */
+  dayOff: boolean;
 };
 
 /**
@@ -124,11 +126,13 @@ export function AssignTechnician({
                   {t.city && <>{t.city} ·</>}{" "}
                   {t.busy
                     ? "Has another job then"
-                    : t.off
-                      ? "Outside their working hours"
-                      : t.available
-                        ? "Taking jobs"
-                        : "Not taking jobs now"}
+                    : t.dayOff
+                      ? "Off that day"
+                      : t.off
+                        ? "Outside their working hours"
+                        : t.available
+                          ? "Taking jobs"
+                          : "Not taking jobs now"}
                 </span>
               </span>
             </label>

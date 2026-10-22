@@ -135,6 +135,16 @@ async function BookingDetails({
             .eq("technician_id", booking.technician_id)
         ).data ?? [])
       : [];
+  // and not onto their days off.
+  const timeOff =
+    canReschedule && booking.technician_id
+      ? ((
+          await supabase
+            .from("technician_time_off")
+            .select("starts_on, ends_on")
+            .eq("technician_id", booking.technician_id)
+        ).data ?? [])
+      : [];
   // Cancelling a visit a technician has: their last-minute cancellations so far, for the warning.
   const cancellable = isCustomer && CUSTOMER_CAN_CANCEL.includes(booking.status);
   const taken = booking.technician_id !== null && (booking.status === "accepted" || booking.status === "en_route");
@@ -319,6 +329,7 @@ async function BookingDetails({
           movesLeft={limited ? MAX_MOVES - moves.length : undefined}
           blocked={moveBlocked}
           hours={hours}
+          timeOff={timeOff}
         />
       )}
 

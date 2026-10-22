@@ -19,7 +19,7 @@ import { firstName } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import type { Point } from "@/lib/tracking";
-import { hoursSummary, type WorkingDay } from "@/lib/working-hours";
+import { scheduleNote, type TimeOff, type WorkingDay } from "@/lib/working-hours";
 import { PinAddress } from "@/components/addresses/pin-address";
 
 type Address = {
@@ -53,6 +53,7 @@ export function BookingForm({
   initial,
   busy,
   hours,
+  timeOff,
   now,
 }: {
   category: { id: string; name: string; inspection_fee: number };
@@ -67,11 +68,13 @@ export function BookingForm({
   busy: string[];
   /** The chosen technician's working hours: times outside them can't be picked. */
   hours: WorkingDay[];
+  /** and their days off. */
+  timeOff: TimeOff[];
   now: number;
 }) {
   const router = useRouter();
   const [busyAt] = useState(() => busy.map((t) => Date.parse(t)));
-  const [when, setWhen] = useState<VisitChoice>(() => ({ day: firstFreeDay(now, { busy: busyAt, hours }), slot: null }));
+  const [when, setWhen] = useState<VisitChoice>(() => ({ day: firstFreeDay(now, { busy: busyAt, hours, timeOff }), slot: null }));
   const [addresses, setAddresses] = useState(initialAddresses);
   const [addressChoice, setAddressChoice] = useState(initial?.addressId ?? initialAddresses[0]?.id ?? NEW_ADDRESS);
   const [newPin, setNewPin] = useState<Point | null>(null); // for a new address
@@ -112,7 +115,7 @@ export function BookingForm({
     const next: typeof errors = {};
     if (!appliance) next.appliance = "Say what needs fixing.";
     if (!problem) next.problem = "Describe the problem so the technician comes prepared.";
-    if (!when.slot || !slotFree(when.day, when.slot, Date.now(), { busy: busyAt, hours })) next.when = "Pick a visit time.";
+    if (!when.slot || !slotFree(when.day, when.slot, Date.now(), { busy: busyAt, hours, timeOff })) next.when = "Pick a visit time.";
     if (newAddress) {
       if (!newAddress.street) next.street = "Enter the house number and street.";
       if (!newAddress.barangay) next.barangay = "Enter the barangay.";
@@ -241,12 +244,11 @@ export function BookingForm({
         now={now}
         busy={busyAt}
         hours={hours}
+        timeOff={timeOff}
         error={errors.when}
       />
-      {technician && hoursSummary(hours) && (
-        <p className="-mt-3 text-sm text-muted">
-          {firstName(technician.full_name)} works {hoursSummary(hours)}.
-        </p>
+      {technician && scheduleNote(firstName(technician.full_name), hours, timeOff) && (
+        <p className="-mt-3 text-sm text-muted">{scheduleNote(firstName(technician.full_name), hours, timeOff)}</p>
       )}
 
       <fieldset className="flex min-w-0 flex-col gap-3">

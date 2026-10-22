@@ -73,10 +73,11 @@ export default function TermsPage() {
           <ul>
             <li>You can take jobs once PatchUp has approved you. Keep your details and documents up to date.</li>
             <li>
-              Take only jobs you can do, keep &quot;Taking new jobs&quot; and your working hours up to date, and tap
-              &quot;I&apos;m on my way&quot; when you leave. If you can&apos;t make it, give the job back as early as
-              you can, so another technician can take it. Giving one back less than 2 hours before the visit, or once
-              you&apos;re on the way, is a last-minute give-back: PatchUp is told, and it counts on your record.
+              Take only jobs you can do, keep &quot;Taking new jobs&quot;, your working hours and your time off up to
+              date, and tap &quot;I&apos;m on my way&quot; when you leave. If you can&apos;t make it, give the job back
+              as early as you can, so another technician can take it. Giving one back less than 2 hours before the
+              visit, or once you&apos;re on the way, is a last-minute give-back: PatchUp is told, and it counts on your
+              record.
             </li>
             <li>If you haven&apos;t set off by the visit time, PatchUp may give the job to another technician.</li>
             <li>
