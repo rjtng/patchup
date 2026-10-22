@@ -204,6 +204,7 @@ export type Database = {
           longitude: number | null
           problem: string
           province: string
+          return_of: string | null
           scheduled_at: string
           status: Database["public"]["Enums"]["booking_status"]
           street: string
@@ -231,6 +232,7 @@ export type Database = {
           longitude?: number | null
           problem: string
           province: string
+          return_of?: string | null
           scheduled_at: string
           status?: Database["public"]["Enums"]["booking_status"]
           street: string
@@ -258,6 +260,7 @@ export type Database = {
           longitude?: number | null
           problem?: string
           province?: string
+          return_of?: string | null
           scheduled_at?: string
           status?: Database["public"]["Enums"]["booking_status"]
           street?: string
@@ -284,6 +287,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_return_of_fkey"
+            columns: ["return_of"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -1322,6 +1332,24 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      request_return_visit: {
+        Args: { booking_id: string; problem: string; scheduled_at: string }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      return_visit_counts: {
+        Args: { technician?: string }
+        Returns: {
+          repairs: number
+          return_visits: number
+          technician_id: string
+        }[]
       }
       mark_notifications_read: { Args: never; Returns: undefined }
       paybacks: {

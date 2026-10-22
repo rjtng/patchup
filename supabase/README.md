@@ -31,7 +31,7 @@ supabase/
 | `addresses`           | Customers' saved places, with map pin and landmark                           |
 | `technician_documents` | Technicians' ID, NBI clearance and certificates (the files are in Storage) |
 | `phone_numbers`       | People's mobile numbers, seen by the other side of a job only while it's under way |
-| `bookings`            | Repair requests and their current status                                      |
+| `bookings`            | Repair requests and their current status (`return_of`: the repair a return visit is for) |
 | `booking_photos`      | Customers' photos of the problem on a booking, up to 3 (the files are in Storage) |
 | `first_booking_offer` | The amount taken off a customer's first booking (0 for none)               |
 | `booking_events`      | Each booking's timeline (created, accepted, on the way, …)                    |
@@ -67,6 +67,8 @@ requested → accepted → en_route → arrived → quoted → in_progress → c
 - Customers can cancel until the technician arrives; after that only an admin can.
 - A request nobody takes is followed up, and cancelled at the visit time if still nobody has it
   (see "Requests nobody takes" below).
+- A repair (done with an approved quote) can get a return visit under its 30-day warranty (see
+  "Repair warranty" below).
 
 Bookings can't be edited directly. Every step is a database function the app calls, for example
 `supabase.rpc('accept_booking', { booking_id })`. Each function checks who is calling and whether
@@ -291,6 +293,23 @@ visit or they're on the way; not in the first 10 minutes after they took it or i
 - `decline_booking` marks a technician's last-minute give-back, and admins are told at once.
 - `last_minute_record(person)` gives someone's last-minute cancellations and give-backs in the last
   30 days, and until when booking is paused, to themselves and admins.
+
+## Repair warranty
+
+A repair (a completed booking with an approved quote, not itself a return visit) has a 30-day
+warranty (`private.warranty_until`). `request_return_visit(booking_id, problem, scheduled_at)` lets
+its customer ask for a return visit while it runs: a new booking (`bookings.return_of` = the repair)
+for the same item and address, with no inspection fee or discount, for the technician who did the
+repair if they're still approved (then within their hours, and not when they have another job),
+otherwise for nobody yet. A suspended customer can't ask; a booking pause doesn't stop it. A repair
+has at most one return visit that isn't cancelled (`bookings_one_return_visit`).
+
+A return visit isn't an open request: other technicians don't see it, can't accept it and aren't
+told of it (live or by notification). When nobody has it (turned down, unanswered after the usual
+wait, or its technician can't take jobs) admins are told and assign someone. Otherwise it's a
+booking like any other: the technician quotes new parts if needed, and with none it comes to
+nothing to pay. `return_visit_counts(technician)` gives a technician's repairs and how many had a
+return visit, to admins (and to the technician, for their own).
 
 ## Profile photos and Top technicians
 

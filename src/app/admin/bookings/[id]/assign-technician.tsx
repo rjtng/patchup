@@ -33,12 +33,15 @@ export function AssignTechnician({
   bookingId,
   category,
   askedFor,
+  repairedBy = null,
   current = null,
   technicians: candidates,
 }: {
   bookingId: string;
   category: string;
   askedFor: string | null;
+  /** On a return visit under warranty: the technician who did the repair. */
+  repairedBy?: string | null;
   /** The technician who has the job, and whether they're running late. */
   current?: { id: string; name: string; late: boolean } | null;
   technicians: Candidate[];
@@ -85,9 +88,11 @@ export function AssignTechnician({
             ? current.late
               ? `${current.name} hasn't set off for this visit. Choose someone else to give it to; the new technician, ${current.name} and the customer are all told.`
               : `${current.name} has this job. If they can't do it, choose someone else to give it to; the new technician, ${current.name} and the customer are all told.`
-            : askedFor
-              ? "The customer asked for someone who hasn't answered yet. You can give the job to them or someone else."
-              : "Nobody has taken this request yet. Give it to an approved technician."}
+            : repairedBy
+              ? "It's a return visit under warranty, so it doesn't go to other technicians by itself. Give it to the technician who did the repair, or someone else."
+              : askedFor
+                ? "The customer asked for someone who hasn't answered yet. You can give the job to them or someone else."
+                : "Nobody has taken this request yet. Give it to an approved technician."}
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {technicians.map((t) => (
@@ -114,7 +119,11 @@ export function AssignTechnician({
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-ink">
                   {t.name}
-                  {t.id === askedFor && <span className="font-normal text-muted"> · the customer&apos;s choice</span>}
+                  {t.id === repairedBy ? (
+                    <span className="font-normal text-muted"> · did the repair</span>
+                  ) : (
+                    t.id === askedFor && <span className="font-normal text-muted"> · the customer&apos;s choice</span>
+                  )}
                 </span>
                 <span className="flex flex-wrap items-center gap-x-1 text-muted">
                   {t.reviews > 0 && (

@@ -100,6 +100,12 @@ export const LAST_MINUTE_LABELS: Record<string, string> = {
   declined: "Technician gave it back at the last minute; finding another",
 };
 
+// and on a return visit under warranty (see the repair warranty migration), which only admins give to someone else.
+export const RETURN_VISIT_LABELS: Record<string, string> = {
+  created: "Return visit asked for",
+  declined: "Technician couldn't make it; the PatchUp team is finding someone",
+};
+
 // From accepted until done: while a job is under way, its customer and
 // technician can see each other's mobile number (the access rules decide).
 export const UNDER_WAY: BookingStatus[] = ["accepted", "en_route", "arrived", "quoted", "in_progress"];
@@ -183,10 +189,14 @@ export function amountDue(booking: {
 /** What's left to pay after a discount (never below zero). */
 export const payable = (amount: number, discount: number) => Math.max(amount - discount, 0);
 
-/** How a total is made up: "₱300 inspection + ₱500 repair − ₱100 first-booking offer". */
+/**
+ * How a total is made up: "₱300 inspection + ₱500 repair − ₱100 first-booking offer".
+ * With no inspection fee (a return visit under warranty), just the repair: "₱500 repair".
+ */
 export function dueParts({ inspection, repair, discount }: { inspection: number; repair: number; discount: number }) {
-  let parts = `${formatPeso(inspection)} inspection`;
-  if (repair > 0) parts += ` + ${formatPeso(repair)} repair`;
+  const items = inspection > 0 || repair === 0 ? [`${formatPeso(inspection)} inspection`] : [];
+  if (repair > 0) items.push(`${formatPeso(repair)} repair`);
+  let parts = items.join(" + ");
   if (discount > 0) parts += ` − ${formatPeso(discount)} first-booking offer`;
   return parts;
 }
